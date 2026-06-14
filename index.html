@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Embodied AI Soft Robotics Rehab Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://template.ams3.digitaloceanspaces.com/three.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';"></script>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; overflow-x: hidden; }
@@ -47,7 +47,11 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #speechText { font-size:18px; color:#58a6ff; min-height:28px; text-align: center; font-style: italic; margin-bottom: 5px; }
 #status { font-size:14px; color:#f0b429; text-align: center; }
 .json-preview { background: #0d1117; color: #48bb78; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid #21262d; margin-top: 10px; }
-.huge-display { font-size: 100px; font-weight: 900; color: #39ff14; text-shadow: 0 0 20px rgba(57,255,20,0.4); text-align: center; margin: 15px 0; font-family: Impact, sans-serif; }
+
+/* 🚨 核心回归：中英文双语高亮大屏数字区 ＋ 自动复位倒计时器 */
+.display-container { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0d1117; border-radius: 10px; border: 1px solid #21262d; padding: 15px; margin: 15px 0; min-height: 180px; }
+.huge-display { font-size: 100px; font-weight: 900; color: #39ff14; text-shadow: 0 0 20px rgba(57,255,20,0.4); font-family: Impact, sans-serif; line-height: 1; }
+.countdown-display { font-size: 14px; color: #ff3b3b; margin-top: 8px; font-family: monospace; font-weight: bold; letter-spacing: 0.5px; height: 18px; }
 
 @keyframes pulse{ 0%{transform:scale(1);} 50%{transform:scale(1.03);} 100%{transform:scale(1);} }
 </style>
@@ -57,7 +61,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V3.0</h2>
+        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V3.1</h2>
     </div>
     <div class="input-group">
         <input id="apiKey" type="password" value="sk-fc94ae6cb57f46238716b9b91dd268c7" placeholder="LLM API Key">
@@ -78,12 +82,12 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 
         <div class="panel">
             <div class="panel-title">🎤 EMBODIED AGENT INTENT / 具身智能自然语言交互舱</div>
-            <div id="speechText">"Waiting for input..."</div>
+            <div id="speechText">"Waiting for input... / 等待语音输入..."</div>
             <div class="control-zone">
                 <button id="recordBtn" class="circle-btn"><div>🎙️ Speak</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">点击开始说话</div></button>
                 <button id="stopBtn" class="circle-btn" onclick="emergencyStop()"><div>🛑 RESET</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">紧急复位</div></button>
             </div>
-            <div id="status">Please bind physical Type-C serial port...</div>
+            <div id="status">Please bind physical Type-C serial port / 请绑定数据线串口...</div>
         </div>
 
         <div class="panel">
@@ -100,14 +104,19 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
                 <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8', '👌')">👌 OK大招</button>
                 <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9', '👍')">👍 点赞大招</button>
             </div>
-            <div id="hugeDisplay" class="huge-display">?</div>
-            <div id="jsonPreview" class="json-preview">📡 Type-C serial bus ready.</div>
+            
+            <div class="display-container">
+                <div id="hugeDisplay" class="huge-display">?</div>
+                <div id="countdownDisplay" class="countdown-display"></div>
+            </div>
+            
+            <div id="jsonPreview" class="json-preview">📡 Type-C serial bus ready / 串口就绪。</div>
         </div>
     </div>
 
     <div class="right-column">
         <div id="threeCanvasContainer">
-            <div id="threeStatusTag">🤖 3D DIGITAL TWIN SYNCHRONIZER REALTIME ACTIVE</div>
+            <div id="threeStatusTag">🤖 3D DIGITAL TWIN SYNCHRONIZER ACTIVE</div>
         </div>
     </div>
 </div>
@@ -131,81 +140,98 @@ const EM_DISPLAY = {"0":"✊","1":"☝️","2":"✌️","3":"👌","4":"🖐️"
 let recognition;
 let isRecording = false;
 let finalTranscript = ""; 
-let autoResetTimeout = null; 
 let serialWriter = null;
 
-// ⏳ 自动化控制核心变量
+// ⏳ 倒计时与安全复位核心变量
+let autoResetTimeout = null; 
+let countdownInterval = null;
+let secondsRemaining = 0;
+
+// ⚙️ 自动化宏控制变量
 let isMacroRecording = false;
 let rehabMacroSequence = []; 
 let isMacroPlaying = false;
 let macroInterval = null;
 
 // ==========================================
-// 🪐 THREE.JS 3D 数字孪生
+// 🪐 THREE.JS 3D 数字孪生引擎（带强力容错）
 // ==========================================
 let scene, camera, renderer;
 let fingers = []; 
 
 function init3DDigitalTwin() {
-    const container = document.getElementById('threeCanvasContainer');
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f172a);
-    
-    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(0, 5, 18);
-    camera.lookAt(0, 2, 0);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
-
-    const ambientLight = new THREE.AmbientLight(0x334155, 1.5); scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0x388bfd, 2); directionalLight.position.set(5, 10, 7); scene.add(directionalLight);
-    const pointLight = new THREE.PointLight(0x39ff14, 1, 10); pointLight.position.set(-3, 2, 2); scene.add(pointLight);
-
-    const palmGeo = new THREE.BoxGeometry(4.5, 4, 0.6);
-    const palmMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.2 });
-    const palm = new THREE.Mesh(palmGeo, palmMat);
-    palm.position.y = 0;
-    scene.add(palm);
-
-    const fingerPositions = [-1.8, -0.9, 0, 0.9, 1.8]; 
-    const fingerColors = [0x388bfd, 0x58a6ff, 0x58a6ff, 0x58a6ff, 0x388bfd];
-
-    for(let i=0; i<5; i++) {
-        const jointPivot = new THREE.Group();
-        jointPivot.position.set(fingerPositions[i], 2, 0);
+    try {
+        if (typeof THREE === 'undefined') {
+            console.error("Three.js 未加载成功，跳过3D初始化，保证核心功能运行。");
+            document.getElementById("threeStatusTag").textContent = "⚠️ 3D ENGINE OFFLINE (NETWORK DELAY)";
+            return;
+        }
+        const container = document.getElementById('threeCanvasContainer');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a);
         
-        let fLength = i === 0 ? 1.8 : 2.5; 
-        const fingerGeo = new THREE.CylinderGeometry(0.2, 0.25, fLength, 16);
-        const fingerMat = new THREE.MeshStandardMaterial({ color: fingerColors[i], roughness: 0.3 });
-        const fingerMesh = new THREE.Mesh(fingerGeo, fingerMat);
-        
-        fingerMesh.position.y = fLength / 2;
-        jointPivot.add(fingerMesh);
-        
-        scene.add(jointPivot);
-        fingers.push(jointPivot); 
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 5, 18);
+        camera.lookAt(0, 2, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0x334155, 1.5); scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0x388bfd, 2); directionalLight.position.set(5, 10, 7); scene.add(directionalLight);
+        const pointLight = new THREE.PointLight(0x39ff14, 1, 10); pointLight.position.set(-3, 2, 2); scene.add(pointLight);
+
+        const palmGeo = new THREE.BoxGeometry(4.5, 4, 0.6);
+        const palmMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.2 });
+        const palm = new THREE.Mesh(palmGeo, palmMat);
+        palm.position.y = 0;
+        scene.add(palm);
+
+        const fingerPositions = [-1.8, -0.9, 0, 0.9, 1.8]; 
+        const fingerColors = [0x388bfd, 0x58a6ff, 0x58a6ff, 0x58a6ff, 0x388bfd];
+
+        for(let i=0; i<5; i++) {
+            const jointPivot = new THREE.Group();
+            jointPivot.position.set(fingerPositions[i], 2, 0);
+            
+            let fLength = i === 0 ? 1.8 : 2.5; 
+            const fingerGeo = new THREE.CylinderGeometry(0.2, 0.25, fLength, 16);
+            const fingerMat = new THREE.MeshStandardMaterial({ color: fingerColors[i], roughness: 0.3 });
+            const fingerMesh = new THREE.Mesh(fingerGeo, fingerMat);
+            
+            fingerMesh.position.y = fLength / 2;
+            jointPivot.add(fingerMesh);
+            
+            scene.add(jointPivot);
+            fingers.push(jointPivot); 
+        }
+
+        fingers[0].position.x = -2.2;
+        fingers[0].position.y = 0.5;
+        fingers[0].rotation.z = 0.4; 
+
+        animate3D();
+    } catch (e) {
+        console.error("3D 渲染出错: ", e);
     }
-
-    fingers[0].position.x = -2.2;
-    fingers[0].position.y = 0.5;
-    fingers[0].rotation.z = 0.4; 
-
-    animate3D();
 }
 
 function animate3D() {
-    requestAnimationFrame(animate3D);
-    renderer.render(scene, camera);
+    if (typeof THREE !== 'undefined' && renderer && scene && camera) {
+        requestAnimationFrame(animate3D);
+        renderer.render(scene, camera);
+    }
 }
 
 function update3DHandPose(p0, p1, p2, p3, p4) {
-    fingers[0].rotation.x = (p0 / 180) * (Math.PI / 2.1);
-    fingers[1].rotation.x = (p1 / 180) * (Math.PI / 2.1);
-    fingers[2].rotation.x = (p2 / 180) * (Math.PI / 2.1);
-    fingers[3].rotation.x = (p3 / 180) * (Math.PI / 2.1);
-    fingers[4].rotation.x = (p4 / 180) * (Math.PI / 2.1);
+    if (fingers.length === 5) {
+        fingers[0].rotation.x = (p0 / 180) * (Math.PI / 2.1);
+        fingers[1].rotation.x = (p1 / 180) * (Math.PI / 2.1);
+        fingers[2].rotation.x = (p2 / 180) * (Math.PI / 2.1);
+        fingers[3].rotation.x = (p3 / 180) * (Math.PI / 2.1);
+        fingers[4].rotation.x = (p4 / 180) * (Math.PI / 2.1);
+    }
 }
 
 window.addEventListener('resize', () => {
@@ -218,7 +244,40 @@ window.addEventListener('resize', () => {
 });
 
 // ==========================================
-// ⏳ 自动化动作录制流函数（严格对齐新中英文规范）
+// ⏱️ 倒计时安全复位逻辑控制
+// ==========================================
+function startAutoResetCountdown() {
+    // 每次动作突变，无条件清空上一次的定时器
+    if(autoResetTimeout) clearTimeout(autoResetTimeout);
+    if(countdownInterval) clearInterval(countdownInterval);
+    
+    secondsRemaining = 10;
+    const countdownEl = document.getElementById("countdownDisplay");
+    countdownEl.textContent = `⏱️ Auto-reset countdown / 自动复位倒计时: ${secondsRemaining}s`;
+
+    countdownInterval = setInterval(() => {
+        secondsRemaining--;
+        if(secondsRemaining <= 0) {
+            clearInterval(countdownInterval);
+            countdownEl.textContent = "🔄 Auto-reset executed / 自动复位已执行";
+        } else {
+            countdownEl.textContent = `⏱️ Auto-reset countdown / 自动复位倒计时: ${secondsRemaining}s`;
+        }
+    }, 1000);
+
+    autoResetTimeout = setTimeout(() => { 
+        executePoseHardwareAndTwin("5"); // 10秒到期强制伸掌(5)复位
+    }, 10400); 
+}
+
+function clearAllTimers() {
+    if(autoResetTimeout) clearTimeout(autoResetTimeout);
+    if(countdownInterval) clearInterval(countdownInterval);
+    document.getElementById("countdownDisplay").textContent = "";
+}
+
+// ==========================================
+// ⏳ 自动化动作录制流函数
 // ==========================================
 function toggleMacroRecording() {
     const btn = document.getElementById("macroRecordBtn");
@@ -250,8 +309,9 @@ function playMacroSequence() {
         isMacroPlaying = true;
         btn.textContent = "🛑 停止循环 / Stop Loop";
         btn.style.background = "#b30000";
-        let stepIndex = 0;
+        clearAllTimers(); // 循环执行期间不需要倒计时打扰
         
+        let stepIndex = 0;
         macroInterval = setInterval(() => {
             let currentPoseKey = rehabMacroSequence[stepIndex];
             setStatus(`Loop executing / 正在循环动作: [${stepIndex + 1}/${rehabMacroSequence.length}]`);
@@ -273,7 +333,7 @@ function stopMacroPlayback() {
 }
 
 // ==========================================
-// 🔌 硬件串口总线交互
+// 🔌 硬件串口总线交互与大脑执行
 // ==========================================
 async function initSerialPort() {
     try {
@@ -303,7 +363,6 @@ function executePoseHardwareAndTwin(actionKey) {
 
 function triggerDirect(action, label) {
     if(isMacroPlaying) stopMacroPlayback();
-    if(autoResetTimeout) clearTimeout(autoResetTimeout);
     
     if(isMacroRecording) { 
         rehabMacroSequence.push(action); 
@@ -311,7 +370,7 @@ function triggerDirect(action, label) {
     }
 
     executePoseHardwareAndTwin(action);
-    autoResetTimeout = setTimeout(() => { executePoseHardwareAndTwin("5"); }, 10000); 
+    startAutoResetCountdown(); // 🪐 激活10秒倒计时安全复位
 }
 
 function initRecognition(){
@@ -338,12 +397,13 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => {
     if(isMacroPlaying) stopMacroPlayback();
     if (isRecording) { isRecording = false; recognition.stop(); return; }
-    if(autoResetTimeout) clearTimeout(autoResetTimeout);
+    clearAllTimers();
     initRecognition(); try { recognition.start(); } catch(e){}
 });
 
 function emergencyStop() {
     if(isMacroPlaying) stopMacroPlayback();
+    clearAllTimers();
     document.getElementById("hugeDisplay").textContent = "🛑";
     document.getElementById("speechText").textContent = "[EMERGENCY RESET]";
     setStatus("Emergency Reset / 紧急安全复位下发。");
@@ -381,7 +441,7 @@ OUTPUT ONLY RAW JSON like {"ans":"3"}. NO MARKDOWN CODES.`;
             }
 
             executePoseHardwareAndTwin(finalAns);
-            autoResetTimeout = setTimeout(() => { executePoseHardwareAndTwin("5"); }, 10000);
+            startAutoResetCountdown(); // 🪐 大模型控制同样完美激活倒计时安全复位
         }
     }catch(err){ setStatus("Request failed / 通信中断: " + err.message); }
 }
