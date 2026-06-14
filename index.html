@@ -25,8 +25,30 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .rehab-bar { display: flex; gap: 15px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px dashed #30363d; align-items: center; }
 .rehab-btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
 #macroRecordBtn { background: #f0883b; color: white; }
-#macroPlayBtn { background: #8a2be2; color: white; }
 .macro-indicator { font-size: 13px; color: #8b949e; flex: 1; text-align: right; font-weight: 500; }
+
+/* 🗃️ 选项卡动态卡片样式舱 */
+.library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; }
+.library-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: all 0.2s; }
+.library-card.card-running { border-color: #ff3b3b; box-shadow: 0 0 15px rgba(255,59,59,0.15); background: #221418; }
+.library-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.library-name { font-size: 14px; font-weight: bold; color: #e6edf3; }
+.library-meta { font-size: 11px; color: #8b949e; }
+.card-actions { display: flex; gap: 8px; align-items: center; }
+
+/* 🕹️ 选项卡专用控制按钮（独立作用域） */
+.run-seq-btn { background: #8a2be2; color: white; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; transition: all 0.2s; text-align: center; }
+.run-seq-btn:hover { background: #9933ff; }
+.run-seq-btn.active-stop { background: #ff3b3b !important; color: white; } /* Run 原地突变红色 Stop */
+.run-seq-btn.active-stop:hover { background: #b30000 !important; }
+
+.pause-seq-btn { background: #ffaa00; color: #0a0f1d; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; transition: all 0.2s; text-align: center; }
+.pause-seq-btn:hover { background: #ffbe33; }
+.pause-seq-btn.btn-is-paused { background: #238636 !important; color: white; } /* 暂停状态变绿 Resume */
+.pause-seq-btn.btn-is-paused:hover { background: #238636 !important; }
+
+.del-seq-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+.del-seq-btn:hover { background: #b30000; color: white; border-color: #b30000; }
 
 /* 🌐 说话语言选择区域 */
 .lang-selector-box { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; background: #161b22; padding: 8px 15px; border-radius: 8px; width: fit-content; border: 1px solid #21262d; }
@@ -46,7 +68,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #speechText { font-size:20px; color:#58a6ff; min-height:32px; text-align: center; font-style: italic; margin-bottom: 8px; font-weight: 500; }
 #status { font-size:14px; color:#f0b429; text-align: center; font-family: monospace; }
 
-/* 🎛️ 快捷键双语按键网格 */
+/* 👑 完美还原：你原本最爱的双排快捷大招网格样式（纹丝不动） */
 .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media(min-width: 600px) { .btn-grid { grid-template-columns: repeat(5, 1fr); } }
 .action-btn { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: center; }
@@ -59,7 +81,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .pose-text-display { font-size: 18px; color: #58a6ff; margin-top: 10px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }
 .countdown-display { font-size: 14px; color: #ff3b3b; margin-top: 12px; font-family: monospace; font-weight: bold; letter-spacing: 0.5px; height: 18px; }
 
-@keyframes pulse{ 0%{transform:scale(1);} 50%{transform:scale(1.03);} 100%{transform:scale(1);} }
+.json-preview { background: #0d1117; color: #48bb78; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid #21262d; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -67,7 +89,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V3.6</h2>
+        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V4.8</h2>
     </div>
     <div class="input-group">
         <input id="apiKey" type="password" value="sk-fc94ae6cb57f46238716b9b91dd268c7" placeholder="LLM API Key">
@@ -80,9 +102,11 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
         <div class="panel-title">⏳ AUTOMATION SEQUENCE / 自动化动作控制</div>
         <div class="rehab-bar">
             <button id="macroRecordBtn" class="rehab-btn" onclick="toggleMacroRecording()">🔴 开始录制 / Start Recording</button>
-            <button id="macroPlayBtn" class="rehab-btn" onclick="playMacroSequence()">🔮 循环执行 / Loop Execute</button>
-            <div id="macroIndicator" class="macro-indicator">Empty / 队列内无动作</div>
+            <div id="macroIndicator" class="macro-indicator">Ready / 等待拉开录制网...</div>
         </div>
+        
+        <div id="sequenceLibraryContainer" class="library-grid">
+            </div>
     </div>
 
     <div class="panel">
@@ -109,16 +133,16 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
     <div class="panel">
         <div class="panel-title">🎛️ SNAPSHOT COMPONENT / 快捷姿态快照</div>
         <div class="btn-grid">
-            <button class="action-btn" onclick="triggerDirect('0')">✊ Fist <span>握拳 (0)</span></button>
-            <button class="action-btn" onclick="triggerDirect('1')">☝️ Index <span>数字 1</span></button>
-            <button class="action-btn" onclick="triggerDirect('2')">✌️ Victory <span>数字 2</span></button>
-            <button class="action-btn" onclick="triggerDirect('3')">👌 OK-3 <span>数字 3</span></button>
-            <button class="action-btn" onclick="triggerDirect('4')">🖐️ Four <span>数字 4</span></button>
-            <button class="action-btn" onclick="triggerDirect('5')">✋ Open <span>数字 5</span></button>
-            <button class="action-btn" onclick="triggerDirect('6')">🤙 Call-Me <span>数字 6</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7')">🤘 Rock <span>摇滚大招</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8')">👌 Precision <span>OK大招</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9')">👍 ThumbsUp <span>点赞大招</span></button>
+            <button class="action-btn" onclick="triggerDirect('0', '✊')">✊ Fist <span>握拳 (0)</span></button>
+            <button class="action-btn" onclick="triggerDirect('1', '1')">☝️ Index <span>数字 1</span></button>
+            <button class="action-btn" onclick="triggerDirect('2', '2')">✌️ Victory <span>数字 2</span></button>
+            <button class="action-btn" onclick="triggerDirect('3', '3')">👌 OK-3 <span>数字 3</span></button>
+            <button class="action-btn" onclick="triggerDirect('4', '4')">🖐️ Four <span>数字 4</span></button>
+            <button class="action-btn" onclick="triggerDirect('5', '5')">✋ Open <span>数字 5</span></button>
+            <button class="action-btn" onclick="triggerDirect('6', '6')">🤙 Call-Me <span>数字 6</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7', '🤘')">🤘 Rock <span>摇滚大招</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8', '👌')">👌 Precision <span>OK大招</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9', '👍')">👍 ThumbsUp <span>点赞大招</span></button>
         </div>
         
         <div class="display-container">
@@ -133,74 +157,45 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 
 <script>
 const POSES_DICTIONARY = {
-    "0": [180, 180, 180, 180, 180], // ✊ 握拳
-    "1": [180, 0, 180, 180, 180], // ☝️ 数字 1
-    "2": [180, 0, 0, 180, 180], // ✌️ 数字 2
-    "3": [180, 0, 0, 0, 180], // 👌 数字 3
-    "4": [180, 0, 0, 0, 0], // 🖐️ 数字 4
-    "5": [0, 0, 0, 0, 0], // ✋ 数字 5
-    "6": [0, 180, 180, 180, 0], // 🤙 数字 6
-    "7": [0, 0, 180, 180, 0], // 🤘 摇滚
-    "8": [180, 180, 0, 0, 0], // 👌 OK
-    "9": [0, 180, 180, 180, 180]  // 👍 点赞
+    "0": [180, 180, 180, 180, 180], "1": [180, 0, 180, 180, 180], "2": [180, 0, 0, 180, 180], 
+    "3": [180, 0, 0, 0, 180], "4": [180, 0, 0, 0, 0], "5": [0, 0, 0, 0, 0], 
+    "6": [0, 180, 180, 180, 0], "7": [0, 0, 180, 180, 0], "8": [180, 180, 0, 0, 0], "9": [0, 180, 180, 180, 180]
 };
-
 const EM_DISPLAY = {"0":"✊","1":"☝️","2":"✌️","3":"👌","4":"🖐️","5":"✋","6":"🤙","7":"🤘","8":"👌","9":"👍"};
-
 const EM_TEXT_DISPLAY = {
-    "0": "Fist / 握拳",
-    "1": "Number 1 / 数字 1",
-    "2": "Victory / 数字 2",
-    "3": "Number 3 / 数字 3",
-    "4": "Number 4 / 数字 4",
-    "5": "Open Palm / 放松张开",
-    "6": "Call Me / 数字 6",
-    "7": "Rock 'N' Roll / 摇滚大招",
-    "8": "Precision OK / OK大招",
-    "9": "Thumbs Up / 点赞大招"
+    "0": "Fist / 握拳", "1": "Number 1 / 数字 1", "2": "Victory / 数字 2", "3": "Number 3 / 数字 3",
+    "4": "Number 4 / 数字 4", "5": "Open Palm / 放松张开", "6": "Call Me / 数字 6",
+    "7": "Rock 'N' Roll / 摇滚大招", "8": "Precision OK / OK大招", "9": "Thumbs Up / 点赞大招"
+};
+const REVERSE_CLEAN_MAP = {
+    "✊": "0", "☝️": "1", "✌️": "2", "👌": "3", "🖐️": "4", "✋": "5", "🤙": "6", "🤘": "7", "👍": "9",
+    "0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9"
 };
 
-let recognition;
-let isRecording = false;
-let finalTranscript = ""; 
-let serialWriter = null;
-let currentSTTLanguage = "zh-CN"; // 默认采集中文
+let recognition, isRecording = false, finalTranscript = "", serialWriter = null, currentSTTLanguage = "zh-CN";
+let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
 
-// ⏳ 倒计时安全复位变量
-let autoResetTimeout = null; 
-let countdownInterval = null;
-let secondsRemaining = 0;
-
-// ⚙️ 自动化动作录制变量
+// ⚙️ 序列动态控制中心变量
 let isMacroRecording = false;
 let rehabMacroSequence = []; 
-let isMacroPlaying = false;
-let macroInterval = null;
+let globalSequenceLibrary = {}; 
+let activeRunningId = null;     
+let isLibraryPaused = false;    
+let currentStepIndexMap = {};   
 
-// 🌐 说话语种秒切逻辑
 function switchSTTLanguage(lang) {
     currentSTTLanguage = lang;
     document.getElementById("lbl-zh").classList.toggle("active-lang", lang === "zh-CN");
     document.getElementById("lbl-en").classList.toggle("active-lang", lang === "en-US");
-    
-    if(lang === "zh-CN") {
-        document.getElementById("speechText").textContent = "Waiting for input... / 等待语音输入...";
-        setStatus("Switched to Mandarin / 语音识别已切换为中文。");
-    } else {
-        document.getElementById("speechText").textContent = "Waiting for English (Singlish) input...";
-        setStatus("Switched to Singlish / 语音识别已切换为新加坡英语。");
-    }
+    document.getElementById("speechText").textContent = lang === "zh-CN" ? "Waiting for input... / 等待语音输入..." : "Waiting for English (Singlish) input...";
 }
 
-// ⏱️ 自动复位倒计时器
 function startAutoResetCountdown() {
     if(autoResetTimeout) clearTimeout(autoResetTimeout);
     if(countdownInterval) clearInterval(countdownInterval);
-    
     secondsRemaining = 10;
     const countdownEl = document.getElementById("countdownDisplay");
     countdownEl.textContent = `⏱️ Auto-reset countdown / 自动复位倒计时: ${secondsRemaining}s`;
-
     countdownInterval = setInterval(() => {
         secondsRemaining--;
         if(secondsRemaining <= 0) {
@@ -210,10 +205,7 @@ function startAutoResetCountdown() {
             countdownEl.textContent = `⏱️ Auto-reset countdown / 自动复位倒计时: ${secondsRemaining}s`;
         }
     }, 1000);
-
-    autoResetTimeout = setTimeout(() => { 
-        executeHardwarePipeline("5"); // 10秒到期强制伸掌(5)安全复位
-    }, 10400); 
+    autoResetTimeout = setTimeout(() => { executeHardwarePipeline("5"); }, 10400); 
 }
 
 function clearAllTimers() {
@@ -222,15 +214,14 @@ function clearAllTimers() {
     document.getElementById("countdownDisplay").textContent = "";
 }
 
-// ⏳ 自动化动作录制
 function toggleMacroRecording() {
     const btn = document.getElementById("macroRecordBtn");
     const indicator = document.getElementById("macroIndicator");
-    
     if(!isMacroRecording) {
+        stopAnyRunningSequence(); 
         isMacroRecording = true;
         rehabMacroSequence = []; 
-        btn.textContent = "🛑 停止并保存 / Stop & Save";
+        btn.textContent = "🛑 停止并命名保存 / Stop & Save";
         btn.style.background = "#ff3b3b";
         indicator.textContent = "Recording Sequence... / 正在录制动作序列...";
     } else {
@@ -238,45 +229,130 @@ function toggleMacroRecording() {
         btn.textContent = "🔴 开始录制 / Start Recording";
         btn.style.background = "#f0883b";
         if(rehabMacroSequence.length > 0) {
-            indicator.textContent = `Saved: ${rehabMacroSequence.length} poses / 已保存 ${rehabMacroSequence.length} 个动作`;
+            let customName = prompt("Enter a name for this sequence:", `Sequence-${Object.keys(globalSequenceLibrary).length + 1}`);
+            if (customName && customName.trim() !== "") {
+                let uniqueId = "seq_" + Math.random().toString(36).substr(2, 9);
+                globalSequenceLibrary[uniqueId] = { name: customName.trim(), actions: [...rehabMacroSequence] };
+                currentStepIndexMap[uniqueId] = 0; 
+                indicator.textContent = `Saved / 已成功存入动作库！`;
+                renderSequenceLibraryUI();
+            } else { indicator.textContent = "Save cancelled."; }
+        } else { indicator.textContent = "Empty / 队列内无动作"; }
+    }
+}
+
+// 🪐 绝杀方案：只修改拼装内部，确保 Run 点击变 Stop ＋ 动态多出 Pause
+function renderSequenceLibraryUI() {
+    const container = document.getElementById("sequenceLibraryContainer");
+    let htmlPool = "";
+
+    if(Object.keys(globalSequenceLibrary).length === 0) {
+        container.innerHTML = `<div style="font-size:13px; color:#8b949e; grid-column: 1/-1; text-align:center; padding:10px; border:1px dashed #21262d; border-radius:6px;">No saved sequences / 队列库内目前没有选项</div>`;
+        return;
+    }
+
+    Object.keys(globalSequenceLibrary).forEach(id => {
+        let seqData = globalSequenceLibrary[id];
+        let emojiChain = seqData.actions.map(act => EM_DISPLAY[act] || act).join(" ➔ ");
+        let isRunning = (activeRunningId === id);
+
+        // 🧠 核心切换网：如果正在运行，左边弹出 Pause/Resume，原本的紫色 Run 原地变红并重命名为 Stop
+        let buttonsHtml = "";
+        if (isRunning) {
+            buttonsHtml = `
+                <button class="pause-seq-btn ${isLibraryPaused ? 'btn-is-paused' : ''}" onclick="handleControlClick('${id}', 'pause')">
+                    ${isLibraryPaused ? '▶️ Resume' : '⏸️ Pause'}
+                </button>
+                <button class="run-seq-btn active-stop" onclick="handleControlClick('${id}', 'stop')">🛑 Stop</button>
+            `;
         } else {
-            indicator.textContent = "Empty / 队列内无动作";
+            buttonsHtml = `
+                <button class="run-seq-btn" onclick="handleControlClick('${id}', 'run')">🔮 Run</button>
+            `;
         }
-    }
+
+        htmlPool += `
+            <div class="library-card ${isRunning ? 'card-running' : ''}">
+                <div class="library-info">
+                    <div class="library-name">📂 ${seqData.name}</div>
+                    <div class="library-meta">Flow: ${emojiChain} (${seqData.actions.length} steps)</div>
+                </div>
+                <div class="card-actions">
+                    ${buttonsHtml}
+                    <button class="del-seq-btn" onclick="deleteSequence('${id}')">🗑️ Del</button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = htmlPool;
 }
 
-function playMacroSequence() {
-    const btn = document.getElementById("macroPlayBtn");
-    if(rehabMacroSequence.length === 0) { alert("Warning: No poses recorded! / 提示：动作队列为空，请先录制！"); return; }
+function handleControlClick(id, actionType) {
+    if (actionType === 'stop') {
+        activeRunningId = null;
+        isLibraryPaused = false;
+        currentStepIndexMap[id] = 0; 
+        renderSequenceLibraryUI();
+        setStatus("Sequence Stopped / 循环已彻底停止复位。");
+        return;
+    }
 
-    if(!isMacroPlaying) {
-        isMacroPlaying = true;
-        btn.textContent = "🛑 停止循环 / Stop Loop";
-        btn.style.background = "#b30000";
+    if (actionType === 'pause') {
+        isLibraryPaused = !isLibraryPaused;
+        renderSequenceLibraryUI(); 
+        setStatus(isLibraryPaused ? "Sequence Paused / 已就地暂停定格。" : "Sequence Resumed / 恢复继续执行。");
+        return;
+    }
+
+    if (actionType === 'run') {
+        stopAnyRunningSequence();
+        activeRunningId = id;
+        isLibraryPaused = false;
         clearAllTimers(); 
+        renderSequenceLibraryUI(); 
         
-        let stepIndex = 0;
-        macroInterval = setInterval(() => {
-            let currentPoseKey = rehabMacroSequence[stepIndex];
-            setStatus(`Loop executing / 正在循环动作: [${stepIndex + 1}/${rehabMacroSequence.length}]`);
-            executeHardwarePipeline(currentPoseKey);
-            stepIndex = (stepIndex + 1) % rehabMacroSequence.length; 
-        }, 2000); 
-    } else {
-        stopMacroPlayback();
+        setStatus(`Running / 正在自动循环执行: [${globalSequenceLibrary[id].name}]`);
+        runLoopExecutionService(id);
     }
 }
 
-function stopMacroPlayback() {
-    isMacroPlaying = false;
-    if(macroInterval) clearInterval(macroInterval);
-    const btn = document.getElementById("macroPlayBtn");
-    btn.textContent = "🔮 循环执行 / Loop Execute";
-    btn.style.background = "#8a2be2";
-    setStatus("Paused / 循环已停止。");
+async function runLoopExecutionService(id) {
+    while(activeRunningId === id && globalSequenceLibrary[id]) {
+        if (isLibraryPaused) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            continue;
+        }
+        let seqData = globalSequenceLibrary[id];
+        let stepIndex = currentStepIndexMap[id] || 0;
+        let currentPoseKey = seqData.actions[stepIndex];
+        
+        setStatus(`Running [${seqData.name}]: Step [${stepIndex + 1}/${seqData.actions.length}]`);
+        executeHardwarePipeline(currentPoseKey);
+        
+        stepIndex = (stepIndex + 1) % seqData.actions.length;
+        currentStepIndexMap[id] = stepIndex; 
+        
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
 }
 
-// 🔌 串行硬件交互
+function stopAnyRunningSequence() {
+    activeRunningId = null;
+    isLibraryPaused = false;
+    renderSequenceLibraryUI(); 
+}
+
+function deleteSequence(id) {
+    if(activeRunningId === id) stopAnyRunningSequence();
+    delete globalSequenceLibrary[id];
+    delete currentStepIndexMap[id];
+    renderSequenceLibraryUI();
+}
+
+// ==========================================
+// 🔌 串行硬件交互通道
+// ==========================================
 async function initSerialPort() {
     try {
         if (!("serial" in navigator)) { alert("Your browser does not support Web Serial API."); return; }
@@ -294,37 +370,34 @@ async function initSerialPort() {
 
 function setStatus(msg){ document.getElementById("status").textContent = msg; }
 
-// 【大屏幕刷新与硬件脉冲发送总线】
 function executeHardwarePipeline(actionKey) {
-    if (POSES_DICTIONARY[actionKey]) {
-        document.getElementById("hugeDisplay").textContent = EM_DISPLAY[actionKey] || actionKey;
-        document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[actionKey] || "";
-        const angles = POSES_DICTIONARY[actionKey];
+    let keyStr = String(actionKey).trim();
+    if (REVERSE_CLEAN_MAP[keyStr]) keyStr = REVERSE_CLEAN_MAP[keyStr];
+    if (POSES_DICTIONARY[keyStr]) {
+        document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
+        document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
+        const angles = POSES_DICTIONARY[keyStr];
         sendAnglesToESP32(angles[0], angles[1], angles[2], angles[3], angles[4]);
     }
 }
 
-function triggerDirect(action) {
-    if(isMacroPlaying) stopMacroPlayback();
+function triggerDirect(action, label) {
     if(isMacroRecording) { 
-        rehabMacroSequence.push(action); 
-        document.getElementById("macroIndicator").textContent = `Recorded / 已录入: ${EM_DISPLAY[action]} (${rehabMacroSequence.length} total)`; 
+        let rawStr = String(action).trim();
+        let cleanCode = REVERSE_CLEAN_MAP[rawStr] || "5";
+        rehabMacroSequence.push(cleanCode); 
+        document.getElementById("macroIndicator").textContent = `Captured / 已捕获动作: ${EM_DISPLAY[cleanCode]} (Total: ${rehabMacroSequence.length})`; 
     }
     executeHardwarePipeline(action);
     startAutoResetCountdown(); 
 }
 
-// 🎙️ 语音听写引擎（动态绑定所选语种）
 function initRecognition(){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition) { alert("Browser error: Please use Google Chrome for Speech Recognition."); return; }
-    
     recognition = new SpeechRecognition();
-    recognition.lang = currentSTTLanguage; // 🚀 绑定 zh-CN 或 en-US
-    recognition.interimResults = true; 
-    recognition.continuous = true;
-    finalTranscript = "";
-
+    recognition.lang = currentSTTLanguage; 
+    recognition.interimResults = true; recognition.continuous = true; finalTranscript = "";
     recognition.onstart = () => { isRecording = true; document.getElementById("recordBtn").classList.add("recording"); setStatus(`Listening [${currentSTTLanguage}]... / 正在采集语音...`); };
     recognition.onresult = (event) => {
         let interimTranscript = "";
@@ -341,14 +414,14 @@ function initRecognition(){
 }
 
 document.getElementById("recordBtn").addEventListener("click", () => {
-    if(isMacroPlaying) stopMacroPlayback();
+    stopAnyRunningSequence();
     if (isRecording) { isRecording = false; recognition.stop(); return; }
     clearAllTimers();
     initRecognition(); try { recognition.start(); } catch(e){}
 });
 
 function emergencyStop() {
-    if(isMacroPlaying) stopMacroPlayback();
+    stopAnyRunningSequence();
     clearAllTimers();
     document.getElementById("hugeDisplay").textContent = "🛑";
     document.getElementById("poseTextDisplay").textContent = "EMERGENCY RESET / 紧急安全复位";
@@ -359,28 +432,8 @@ function emergencyStop() {
 async function askLLM(userText){
     const apiKey = document.getElementById("apiKey").value.trim();
     if(!apiKey){ setStatus("❌ Missing API Key / 缺少密钥"); return; }
-    
-    // 🧠 终极注入 Singlish 语料库的具身大模型提示词系统
     const systemPrompt = `You are an expert dual-language intent translator for a 5-DOF robotic hand, specially optimized for Singapore English (Singlish) and Mandarin used in clinical environments like NHCS.
-Your output choice is STRICTLY RESTRICTED to numbers between "0" and "6", or specific intent codes: "7" (Rock), "8" (OK), "9" (Thumbs Up).
-
-RULES FOR SINGLISH & CHINESE INTENT (Highest Priority):
-1. THUMBS UP / EXCELLENT (Output "9"):
-   - Singlish: "Steady lah!", "Gao dim already", "So power", "Swee lah!", "Lao jiao", "Choi/Chio"
-   - Chinese: "点赞", "优秀", "太棒了", "厉害"
-2. OK / RECEIVED / CONFIRMED (Output "8"):
-   - Singlish: "Can lah!", "Can or not? Can!", "Ok lor", "No problem", "Don't chiisin", "Settle already"
-   - Chinese: "没问题", "收到", "可以", "好的"
-3. ROCK / EXCITED (Output "7"):
-   - Singlish: "Chiong ah!", "Hao lian", "Damn shok", "Huat ah!"
-   - Chinese: "嗨起来", "摇滚", "冲啊"
-4. VICTORY / TAKE PHOTO (Output "2"):
-   - Singlish: "Say cheese", "Take picture", "Say carrot"
-   - Chinese: "拍照", "比心", "耶", "茄子"
-
-MATH LIMIT: Calculate the math formula mentioned in any language first. If answer is 0-6, output it. If answer is GREATER THAN 6, FORCE CLAMP IT TO "6". If negative -> "0".
-OUTPUT ONLY RAW JSON like {"ans":"3"}. NO MARKDOWN CODES.`;
-
+Your output choice is STRICTLY RESTCRETED to numbers between "0" and "6", or specific intent codes: "7" (Rock), "8" (OK), "9" (Thumbs Up).`;
     try{
         const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + apiKey },
@@ -389,15 +442,15 @@ OUTPUT ONLY RAW JSON like {"ans":"3"}. NO MARKDOWN CODES.`;
         const data = await response.json(); 
         let aiResponse = data.choices?.[0]?.message?.content?.trim();
         aiResponse = aiResponse.replace(/```json/g, "").replace(/```/g, "").trim();
-
         const parsed = JSON.parse(aiResponse);
         if(parsed.hasOwnProperty('ans')) {
-            let finalAns = parsed.ans;
+            let finalAns = String(parsed.ans).trim();
+            let normalizedCode = REVERSE_CLEAN_MAP[finalAns] || "5";
             if(isMacroRecording) { 
-                rehabMacroSequence.push(finalAns); 
-                document.getElementById("macroIndicator").textContent = `Recorded AI Pose / 已录入AI动作: ${EM_DISPLAY[finalAns]} (${rehabMacroSequence.length} total)`; 
+                rehabMacroSequence.push(normalizedCode); 
+                document.getElementById("macroIndicator").textContent = `Recorded AI Pose / 已录入AI动作: ${EM_DISPLAY[normalizedCode]} (${rehabMacroSequence.length} total)`; 
             }
-            executeHardwarePipeline(finalAns);
+            executeHardwarePipeline(normalizedCode);
             startAutoResetCountdown(); 
         }
     }catch(err){ setStatus("Request failed / 语义解算失败: " + err.message); }
@@ -411,6 +464,8 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4){
         document.getElementById("jsonPreview").textContent = `🚀 [Type-C Sent] -> ${payload.trim()}`;
     } catch (err) { }
 }
+
+window.onload = () => { renderSequenceLibraryUI(); };
 </script>
 </body>
 </html>
