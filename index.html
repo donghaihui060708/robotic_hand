@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Robot Hand Serial Master Controller</title>
+<style>
+*{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+body{ background:#0d1117; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+.header{ width:100%; max-width:900px; padding:25px; display:flex; flex-wrap:wrap; gap:15px; align-items: flex-end; justify-content:center; }
+.input-group{ flex:1; min-width:280px; }
+label{ display:block; margin-bottom:8px; color:#8b949e; font-size:14px; }
+input{ width:100%; background:#161b22; border:1px solid #30363d; color:white; padding:12px; border-radius:10px; outline:none; }
+input:focus{ border-color:#58a6ff; box-shadow:0 0 10px rgba(88,166,255,0.3); }
+#connectPortBtn { background: linear-gradient(145deg,#388bfd,#1f6feb); color: white; padding: 12px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: all 0.2s; height: 45px; }
+#connectPortBtn:hover { transform: scale(1.02); }
+.lang-selector { margin-top: 10px; margin-bottom: 25px; display: flex; background: #161b22; border: 1px solid #30363d; padding: 5px; border-radius: 25px; gap: 5px; }
+.lang-btn { padding: 10px 22px; border: none; background: transparent; color: #8b949e; font-size: 14px; font-weight: bold; border-radius: 20px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+.lang-btn.active { background: #21262d; color: #58a6ff; box-shadow: 0 0 10px rgba(88, 166, 255, 0.2); border: 1px solid #30363d; }
+.lang-code { font-size: 10px; text-transform: uppercase; background: #30363d; color: #8b949e; padding: 2px 5px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; }
+.lang-btn.active .lang-code { background: rgba(88, 166, 255, 0.15); color: #58a6ff; }
+.control-zone { display: flex; align-items: center; gap: 40px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+#recordBtn{ width:220px; height:220px; border-radius:50%; border:none; cursor:pointer; font-size:22px; font-weight:bold; color:white; background:linear-gradient(145deg,#238636,#2ea043); transition:all 0.3s ease; box-shadow:0 0 30px rgba(46,160,67,0.3); }
+#stopBtn { width:220px; height:220px; border-radius:50%; border:none; cursor:pointer; font-size:22px; font-weight:bold; color:white; background:linear-gradient(145deg,#b30000,#ff3b3b); transition:all 0.3s ease; box-shadow:0 0 30px rgba(255, 59, 59, 0.3); }
+#stopBtn:hover { transform:scale(1.05); box-shadow:0 0 40px #ff4444; }
+#recordBtn:hover{ transform:scale(1.05); }
+.recording{ background:linear-gradient(145deg,#ff3b3b,#b30000)!important; animation:pulse 1.2s infinite; }
+@keyframes pulse{ 0%{ transform:scale(1); } 50%{ transform:scale(1.05); } 100%{ transform:scale(1); } }
+.preset-panel { margin-top: 35px; width: 100%; max-width: 900px; background: #161b22; border: 1px solid #30363d; border-radius: 15px; padding: 20px; }
+.panel-title { font-size: 14px; color: #8b949e; margin-bottom: 15px; text-align: center; font-weight: bold; }
+.btn-grid { display: grid; grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 12px; overflow-x: auto; padding-bottom: 5px; }
+.action-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 135px; }
+.action-btn div:first-child { font-size: 14px; }
+.action-btn div:last-child { font-size: 11px; font-weight: normal; opacity: 0.7; }
+.action-btn:hover { background: #30363d; border-color: #8b949e; color: white; }
+.btn-macro { border-color: #388bfd !important; color: #58a6ff !important; }
+#speechText{ margin-top:25px; font-size:22px; color:#58a6ff; text-align:center; min-height:35px; }
+#status{ margin-top:15px; color:#f0b429; font-size:16px; text-align:center; min-height:25px; }
+.footer{ width:100%; padding: 25px 0; text-align:center; }
+#presetDisplay{ font-size:80px; font-weight:900; color:#39ff14; }
+.json-preview { width: 100%; max-width: 900px; background: #161b22; color: #48bb78; padding: 12px; border-radius: 6px; font-family: monospace; margin-top: 15px; font-size: 0.9rem; text-align: center; border: 1px dashed #30363d; }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="input-group">
+        <label>LLM API Key / 大模型密钥</label>
+        <input id="apiKey" type="password" value="sk-fc94ae6cb57f46238716b9b91dd268c7">
+    </div>
+    <button id="connectPortBtn" onclick="initSerialPort()">🔌 Connect Type-C Wire / 绑定数据线串口</button>
+</div>
+
+<div class="lang-selector">
+    <button id="btnZh" class="lang-btn active" onclick="switchLanguage('zh-CN')"><span class="lang-code">CN</span> 中文模式</button>
+    <button id="btnEn" class="lang-btn" onclick="switchLanguage('en-SG')"><span class="lang-code">EN</span> English mode</button>
+</div>
+
+<div class="control-zone">
+    <button id="recordBtn"><div>Click to Speak</div><div style="font-size:14px; font-weight:normal; opacity:0.8;">点击开始说话</div></button>
+    <button id="stopBtn" onclick="emergencyStop()"><div>EMERGENCY</div><div>STOP</div><div style="font-size:14px; font-weight:normal; opacity:0.8;">紧急停止/复位</div></button>
+</div>
+
+<div class="main">
+    <div class="preset-panel">
+        <div class="panel-title">QUICK PANEL / 免对话快捷面板</div>
+        <div class="btn-grid">
+            <button class="action-btn" onclick="triggerDirect('0', '✊')"><div>✊ 握拳 (0)</div><div>Fist / Angry</div></button>
+            <button class="action-btn" onclick="triggerDirect('1', '1')"><div>☝️ 数字 1</div><div>Digit 1</div></button>
+            <button class="action-btn" onclick="triggerDirect('2', '2')"><div>✌️ 数字 2</div><div>Digit 2</div></button>
+            <button class="action-btn" onclick="triggerDirect('3', '3')"><div>👌 数字 3</div><div>Digit 3</div></button>
+            <button class="action-btn" onclick="triggerDirect('4', '4')"><div>🖐️ 数字 4</div><div>Digit 4</div></button>
+            <button class="action-btn" onclick="triggerDirect('5', '5')"><div>✋ 数字 5</div><div>Digit 5</div></button>
+            <button class="action-btn" onclick="triggerDirect('6', '6')"><div>🤙 数字 6</div><div>Digit 6</div></button>
+            <button class="action-btn" onclick="triggerDirect('7', '🤘')"><div>🤘 摇滚 7</div><div>Rock / Love</div></button>
+            <button class="action-btn" onclick="triggerDirect('8', '👌')"><div>👌 OK 8</div><div>OK Gesture</div></button>
+            <button class="action-btn" onclick="triggerDirect('9', '👍')"><div>👍 点赞 9</div><div>Thumbs Up</div></button>
+            <button class="action-btn btn-macro" onclick="triggerDirect('COMBO_10', '🔢')"><div>🔢 正数连招</div><div>Count Up</div></button>
+            <button class="action-btn btn-macro" onclick="triggerDirect('COMBO_11', '⏳')"><div>⏳ 倒计时</div><div>Countdown</div></button>
+        </div>
+    </div>
+    <div id="speechText"></div>
+    <div id="status">Please bind Type-C serial cable... / 请先点击上方绑定数据线...</div>
+    <div id="jsonPreview" class="json-preview">📡 实时吞吐监控区：等待串口连接...</div>
+</div>
+<div class="footer"><div id="presetDisplay">?</div></div>
+
+<script>
+const recordBtn = document.getElementById("recordBtn");
+const speechText = document.getElementById("speechText");
+const statusBox = document.getElementById("status");
+const presetDisplay = document.getElementById("presetDisplay");
+const jsonPreview = document.getElementById("jsonPreview");
+
+let recognition;
+let isRecording = false;
+let finalTranscript = ""; 
+let currentLang = "zh-CN"; 
+let comboInterval = null; 
+let autoResetTimeout = null; 
+
+let serialPort = null;
+let serialWriter = null;
+
+// 🔒【物理关节完全体字典】：0-6为硬数字，7-9为特定大招指令映射
+const POSES_DICTIONARY = {
+    "0": [180, 180, 180, 180, 180], // ✊ 握拳 / 错误 / 愤怒
+    "1": [180, 0, 180, 180, 180], // ☝️ 数字 1 / 指一下
+    "2": [180, 0, 0, 180, 180], // ✌️ 数字 2 / 比个耶 / 拍照 / 开心
+    "3": [180, 0, 0, 0, 180], // 👌 数字 3
+    "4": [180, 0, 0, 0, 0], // 🖐️ 数字 4
+    "5": [0, 0, 0, 0, 0], // ✋ 数字 5 / 击掌 / 打招呼
+    "6": [0, 180, 180, 180, 0], // 🤙 数字 6 / 打电话
+    "7": [0, 0, 180, 180, 0], // 🤘 摇滚大招 / 嗨起来 / 爱你
+    "8": [180, 180, 0, 0, 0], // 👌 OK大招 / 没问题 / 收到
+    "9": [0, 180, 180, 180, 180]  // 👍 点赞大招 / 夸奖 / 赞美
+};
+
+async function initSerialPort() {
+    try {
+        if (!("serial" in navigator)) { alert("Your browser does not support Web Serial API. Please use Chrome/Edge."); return; }
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ 
+            baudRate: 115200,
+            dataBits: 8,
+            stopBits: 1,
+            parity: "none",
+            flowControl: "none" 
+        });
+        await serialPort.setSignals({ dataTerminalReady: true, requestToSend: true });
+
+        const textEncoder = new TextEncoderStream();
+        textEncoder.readable.pipeTo(serialPort.writable);
+        serialWriter = textEncoder.writable.getWriter();
+        document.getElementById("connectPortBtn").style.background = "#238636";
+        document.getElementById("connectPortBtn").textContent = "✅ Type-C Connected!";
+        setStatus("🔌 Hardware Serial Port Binded! 信号畅通无阻。");
+        jsonPreview.textContent = '{"p0":0,"p1":0,"p2":0,"p3":0,"p4":0}';
+    } catch (err) { setStatus("❌ Connection failed: " + err.message); }
+}
+
+function setStatus(msg){ statusBox.textContent = msg; }
+function switchLanguage(lang) { if (isRecording) return; currentLang = lang; document.getElementById("btnZh").classList.toggle("active", lang === "zh-CN"); document.getElementById("btnEn").classList.toggle("active", lang === "en-SG"); }
+
+function initRecognition(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = currentLang; recognition.interimResults = true; recognition.continuous = true;
+    finalTranscript = "";
+
+    recognition.onstart = () => {
+        isRecording = true; recordBtn.classList.add("recording");
+        recordBtn.innerHTML = `<div>Click to Stop</div><div style="font-size:14px; font-weight:normal; opacity:0.8;">结束聆听</div>`;
+        setStatus(`🎤 Listening... Command will be shot via Type-C.`);
+    };
+    recognition.onresult = (event) => {
+        let interimTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " ";
+            else interimTranscript += event.results[i][0].transcript;
+        }
+        speechText.textContent = `"${finalTranscript + interimTranscript}"`;
+    };
+    recognition.onerror = () => { stopUI(); };
+    recognition.onend = () => { if(!isRecording && finalTranscript.trim() !== "") { setStatus("🧠 AI Processing..."); askLLM(finalTranscript.trim()); } stopUI(); };
+}
+
+function stopUI(){ isRecording = false; recordBtn.classList.remove("recording"); recordBtn.innerHTML = `<div>Click to Speak</div><div style="font-size:14px; font-weight:normal; opacity:0.8;">点击开始说话</div>`; }
+
+recordBtn.addEventListener("click", () => {
+    if (isRecording) { isRecording = false; recognition.stop(); return; }
+    clearAllTimers(); initRecognition();
+    try { recognition.start(); } catch(e) { isRecording = true; recordBtn.classList.add("recording"); }
+});
+
+function emergencyStop() {
+    clearAllTimers(); presetDisplay.textContent = "🛑"; speechText.textContent = "[EMERGENCY STOP]";
+    setStatus("🛑 System Interrupted. Resetting to 0,0,0,0,0 via Type-C.");
+    sendAnglesToESP32(0, 0, 0, 0, 0); 
+}
+
+function triggerDirect(action, label) {
+    clearAllTimers();
+    if (action === 'COMBO_10') { runCountingSequence(); }
+    else if (action === 'COMBO_11') { runCountdownSequence(); }
+    else if (POSES_DICTIONARY[action]) {
+        presetDisplay.textContent = label;
+        const targetAngles = POSES_DICTIONARY[action];
+        sendAnglesToESP32(targetAngles[0], targetAngles[1], targetAngles[2], targetAngles[3], targetAngles[4]);
+        autoResetTimeout = setTimeout(() => { presetDisplay.textContent = "🖐️"; sendAnglesToESP32(0, 0, 0, 0, 0); }, 10000);
+    }
+}
+function clearAllTimers() { if(comboInterval) clearInterval(comboInterval); if(autoResetTimeout) clearTimeout(autoResetTimeout); }
+
+// 🧠【具身智能大脑】：纯数学拦截上限为6；特定动作输出大招封条（7=摇滚，8=OK，9=点赞）
+async function askLLM(userText){
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if(!apiKey){ setStatus("❌ Missing API Key"); return; }
+    
+    const systemPrompt = `You are a strict math solver and social intent translator for a 5-DOF robotic hand.
+Analyze user input and output a single JSON object with ONE field: "ans".
+"ans" must be chosen from: "0"-"6" (for numbers), "7" (Rock), "8" (OK), "9" (Thumbs Up), "COMBO_10", or "COMBO_11".
+
+🚨 BREAKTHROUGH SYSTEM RULES:
+
+1. **SOCIAL INTENT / GESTURE大招 (Highest Priority)**:
+   - If user praises or compliments ("真牛", "点赞", "做得好", "Awesome", "Good job"), ALWAYS output {"ans":"9"} (Thumbs Up).
+   - If user says OK, agrees, or says "没问题" / "收到" / "Okay", ALWAYS output {"ans":"8"} (OK Gesture).
+   - If user wants to rock, listen to music, or says "摇滚" / "嗨起来" / "Rock and roll", ALWAYS output {"ans":"7"} (Rock).
+   - If user is happy or asks to take a photo ("拍照", "合影", "茄子", "开心", "Happy"), ALWAYS output {"ans":"2"} (Victory ✌️).
+
+2. **MATH & NUMBER BOUNDARY (0-6 LIMIT)**:
+   - Calculate math questions first.
+   - If the answer is between 0 and 6, output the number string (e.g., 4 -> "4").
+   - If the answer is GREATER THAN 6 (e.g., 7, 8, 9, 10), you MUST clamp it and output {"ans":"6"}.
+   - If answer is negative or zero -> {"ans":"0"}.
+
+OUTPUT RAW JSON ONLY. NO MARKDOWN CODE BLOCKS.
+
+FEW-SHOT TRAINING EXAMPLES:
+- "小明有3个苹果吃了1个还剩几个？" -> {"ans":"2"}
+- "五加四等于几" -> {"ans":"6"} (9 is clamped to 6)
+- "帮我比个OK的手势" -> {"ans":"8"} (OK 大招)
+- "老铁真牛逼，给你点赞！" -> {"ans":"9"} (点赞 大招)
+- "现场气氛嗨起来，摇滚！" -> {"ans":"7"} (摇滚 大招)
+- "一起拍个照吧，茄子" -> {"ans":"2"} (拍照比耶)
+- "请开始正数连招" -> {"ans":"COMBO_10"}`;
+
+    try{
+        const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+            method:"POST", headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + apiKey },
+            body:JSON.stringify({ model:"deepseek-chat", temperature:0.1, messages:[{ role:"system", content:systemPrompt }, { role:"user", content:userText }] })
+        });
+        const data = await response.json(); 
+        let aiResponse = data.choices?.[0]?.message?.content?.trim();
+        aiResponse = aiResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        if (aiResponse.includes("COMBO_10")) { runCountingSequence(); }
+        else if (aiResponse.includes("COMBO_11")) { runCountdownSequence(); }
+        else {
+            const parsed = JSON.parse(aiResponse);
+            if(parsed.hasOwnProperty('ans')) {
+                let finalAns = parsed.ans;
+                
+                // 网页大屏显示美化
+                if (finalAns === "9") presetDisplay.textContent = "👍";
+                else if (finalAns === "8") presetDisplay.textContent = "👌";
+                else if (finalAns === "7") presetDisplay.textContent = "🤘";
+                else if (finalAns === "2") presetDisplay.textContent = "✌️";
+                else presetDisplay.textContent = finalAns;
+
+                // 本地硬核映射映射发射
+                if (POSES_DICTIONARY[finalAns]) {
+                    const angles = POSES_DICTIONARY[finalAns];
+                    sendAnglesToESP32(angles[0], angles[1], angles[2], angles[3], angles[4]);
+                    autoResetTimeout = setTimeout(() => { presetDisplay.textContent = "🖐️"; sendAnglesToESP32(0, 0, 0, 0, 0); }, 10000);
+                }
+            } else { setStatus("⚠️ AI returned invalid format"); }
+        }
+    }catch(err){ setStatus("❌ Request Failed: " + err.message); }
+}
+
+function runCountingSequence() {
+    let step = 0; comboInterval = setInterval(() => {
+        if (step <= 5) { presetDisplay.textContent = step; const angles = POSES_DICTIONARY[String(step)]; sendAnglesToESP32(angles[0], angles[1], angles[2], angles[3], angles[4]); step++; }
+        else { clearInterval(comboInterval); }
+    }, 1200);
+}
+function runCountdownSequence() {
+    let step = 5; comboInterval = setInterval(() => {
+        if (step >= 0) { presetDisplay.textContent = step; const angles = POSES_DICTIONARY[String(step)]; sendAnglesToESP32(angles[0], angles[1], angles[2], angles[3], angles[4]); step--; }
+        else { clearInterval(comboInterval); presetDisplay.textContent = "🚀"; sendAnglesToESP32(0, 0, 0, 0, 0); }
+    }, 1200);
+}
+
+async function sendAnglesToESP32(p0, p1, p2, p3, p4){
+    if (!serialWriter) { setStatus("⚠️ Please click the button to bind Type-C cable port first!"); return; }
+    try {
+        const payload = `{"p0":${p0},"p1":${p1},"p2":${p2},"p3":${p3},"p4":${p4}}\n`;
+        await serialWriter.write(payload);
+        jsonPreview.textContent = `🚀 [Type-C Sent] -> ${payload.trim()}`;
+    } catch (err) { statusBox.textContent = "❌ Serial Write Error: " + err.message; }
+}
+</script>
+</body>
+</html>
