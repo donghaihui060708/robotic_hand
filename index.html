@@ -1,22 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V9.5</title>
+<title>Embodied AI Soft Robotics Client V9.6</title>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom: 40px; }
 .header{ width:100%; max-width:1000px; padding:20px; display:flex; gap:15px; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937; margin-bottom: 20px; }
-.input-group{ flex:1; max-width: 400px; }
+.input-group{ flex:1; max-width: 450px; }
 input{ width:100%; background:#0d1117; border:1px solid #30363d; color:white; padding:12px 15px; border-radius:8px; outline:none; font-size: 13px; }
 input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #connectPortBtn { background: linear-gradient(145deg,#1f6feb,#388bfd); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
 #connectPortBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,139,253,0.4); }
 .main-container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; padding: 0 20px; }
 .panel { background: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-.panel-title { font-size: 13px; color: #388bfd; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
-.panel-title span { font-size: 11px; color: #8b949e; text-transform: none; font-weight: normal; margin-left: 5px; }
+.panel-title { font-size: 14px; color: #388bfd; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
 .control-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; margin-bottom: 20px; }
 .slider-group { display: flex; flex-direction: column; gap: 8px; }
 .slider-group label { font-size: 12px; font-weight: bold; color: #8b949e; display: flex; justify-content: space-between; }
@@ -61,15 +60,15 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #recordBtn { background: linear-gradient(145deg,#238636,#2ea043); box-shadow:0 0 20px rgba(46,160,67,0.2); }
 #recordBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
 #stopBtn { background: linear-gradient(145deg,#b30000,#ff3b3b); box-shadow:0 0 20px rgba(255,59,59,0.2); }
-#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
+#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(255,59,59,0.4); }
 .recording { animation: pulse 1.2s infinite; background: #ff3b3b !important; }
 #speechText { font-size:20px; color:#58a6ff; min-height:32px; text-align: center; font-style: italic; margin-bottom: 8px; font-weight: 500; }
 #status { font-size:14px; color:#f0b429; text-align: center; font-family: monospace; }
 .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media(min-width: 600px) { .btn-grid { grid-template-columns: repeat(5, 1fr); } }
-.action-btn { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: center; font-weight: bold; }
+.action-btn { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: center; }
 .action-btn:hover { background: #21262d; border-color: #8b949e; color: white; }
-.action-btn span { font-size: 11px; opacity: 0.6; font-weight: normal; block-size: auto; }
+.action-btn span { font-size: 11px; opacity: 0.6; font-weight: normal; }
 .display-container { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0d1117; border-radius: 12px; border: 1px solid #21262d; padding: 20px; margin: 20px 0; min-height: 200px; }
 .huge-display { font-size: 80px; font-weight: 900; color: #39ff14; text-shadow: 0 0 20px rgba(57,255,20,0.4); font-family: Impact, sans-serif; line-height: 1; }
 .pose-text-display { font-size: 18px; color: #58a6ff; margin-top: 10px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }
@@ -82,15 +81,17 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:15px; letter-spacing:0.5px; font-weight: 900;">EMBODIED AI SOFT ROBOTICS CLIENT V9.5</h2>
+        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V9.6</h2>
     </div>
-
-    <button id="connectPortBtn" onclick="initSerialPort()">🔌 Connect Type-C Wire / 连接数据线串口</button>
+    <div class="input-group">
+        <input id="apiKey" type="password" value="" placeholder="LLM API Key (Or automatically read from Vercel variables)">
+    </div>
+    <button id="connectPortBtn" onclick="initSerialPort()">🔌 Connect Type-C Wire</button>
 </div>
 
 <div class="main-container">
     <div class="panel">
-        <div class="panel-title">🎚️ Real-time Bézier Trajectory Tuning <span>/ 贝塞尔曲线运动控制动态调节</span></div>
+        <div class="panel-title">🎚️ Real-time Bézier Trajectory Tuning / 贝塞尔曲线控制动态调节</div>
         <div class="control-sliders">
             <div class="slider-group">
                 <label>Motion Duration (ms) <span><span id="valDuration">800</span> ms</span></label>
@@ -104,7 +105,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
     </div>
 
     <div class="panel">
-        <div class="panel-title">🕹️ Independent Motor Manual Sliders <span>/ 5轴手指马达独立手动控制滑块</span></div>
+        <div class="panel-title">🕹️ Independent Motor Manual Sliders / 5轴手指马达手动控制滑块</div>
         <div class="motor-grid">
             <div class="motor-col">
                 <span>👍 Thumb (P0)</span>
@@ -135,52 +136,52 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
     </div>
 
     <div class="panel">
-        <div class="panel-title">⏳ Automation Sequence Control <span>/ 自动化动作序列控制</span></div>
+        <div class="panel-title">⏳ AUTOMATION SEQUENCE / 自动化动作控制</div>
         <div class="rehab-bar">
-            <button id="macroRecordBtn" class="rehab-btn" onclick="toggleMacroRecording()">🔴 Start Recording / 开始录制</button>
+            <button id="macroRecordBtn" class="rehab-btn" onclick="toggleMacroRecording()">🔴 开始录制 / Start Recording</button>
             <div id="macroIndicator" class="macro-indicator">Ready / 等待拉开录制网...</div>
         </div>
         <div id="sequenceLibraryContainer" class="library-grid"></div>
     </div>
 
     <div class="panel">
-        <div class="panel-title">🎤 Embodied Agent Intelligence Cabin <span>/ 具身智能自然语言交互舱</span></div>
+        <div class="panel-title">🎤 EMBODIED AGENT INTENT / 具身智能自然语言交互舱</div>
         
-        <div class="text-chat-box">
-            <input id="textInput" type="text" placeholder="Type command here and press Enter... / 在这里输入文字指令并回车..." onkeydown="if(event.key==='Enter') sendTextMessage()">
-            <button onclick="sendTextMessage()">Send / 发送</button>
+        <div class="text-chat-box" style="display: flex; gap: 10px; margin-bottom: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d;">
+            <input id="textInput" type="text" placeholder="Type command here and press Enter... / 在这里输入文字指令并回车..." style="flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 6px;" onkeydown="if(event.key==='Enter') sendTextMessage()">
+            <button onclick="sendTextMessage()" style="background: #238636; color: white; border: none; padding: 0 22px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">Send / 发送</button>
         </div>
 
         <div class="lang-selector-box">
-            <span style="font-size:12px; color:#8b949e; margin-right:5px;">🗣️ STT Language / 说话语言:</span>
+            <span style="font-size:12px; color:#8b949e; margin-right:5px;">🗣️ STT Language:</span>
             <label class="lang-radio active-lang" id="lbl-zh">
-                <input type="radio" name="stt_lang" value="zh-CN" checked onchange="switchSTTLanguage('zh-CN')"> English / 英文辅助
+                <input type="radio" name="stt_lang" value="zh-CN" checked onchange="switchSTTLanguage('zh-CN')"> 中文 (Mandarin)
             </label>
             <label class="lang-radio" id="lbl-en" style="margin-left:10px;">
-                <input type="radio" name="stt_lang" value="en-US" onchange="switchSTTLanguage('en-US')"> Mandarin / 中文辅助
+                <input type="radio" name="stt_lang" value="en-US" onchange="switchSTTLanguage('en-US')"> English (Singlish)
             </label>
         </div>
-        <div id="speechText">"Waiting for user input... / 等待语音或文字输入..."</div>
+        <div id="speechText">"Waiting for input... / 等待语音输入..."</div>
         <div class="control-zone">
-            <button id="recordBtn" class="circle-btn"><div>🎙️ Speak</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">Click to talk</div></button>
-            <button id="stopBtn" class="circle-btn" onclick="emergencyStop()"><div>🛑 RESET</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">Emergency stop</div></button>
+            <button id="recordBtn" class="circle-btn"><div>🎙️ Speak</div></button>
+            <button id="stopBtn" class="circle-btn" onclick="emergencyStop()"><div>🛑 RESET</div></button>
         </div>
-        <div id="status">Please bind physical Type-C serial port / 请绑定物理数据线串口...</div>
+        <div id="status">Please bind physical Type-C serial port / 请绑定数据线串口...</div>
     </div>
 
     <div class="panel">
-        <div class="panel-title">🎛️ Snapshot Gesture Components <span>/ 快捷手势姿态快照</span></div>
+        <div class="panel-title">🎛️ SNAPSHOT COMPONENT / 快捷姿态快照</div>
         <div class="btn-grid">
-            <button class="action-btn" onclick="triggerDirect('0')">✊ Fist <span>握拳 (0)</span></button>
-            <button class="action-btn" onclick="triggerDirect('1')">☝️ Index <span>数字 1</span></button>
-            <button class="action-btn" onclick="triggerDirect('2')">✌️ Victory <span>数字 2</span></button>
-            <button class="action-btn" onclick="triggerDirect('3')">👌 OK-3 <span>数字 3</span></button>
-            <button class="action-btn" onclick="triggerDirect('4')">🖐️ Four <span>数字 4</span></button>
-            <button class="action-btn" onclick="triggerDirect('5')">✋ Open <span>数字 5</span></button>
-            <button class="action-btn" onclick="triggerDirect('6')">🤙 Call-Me <span>数字 6</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7')">🤘 Rock <span>摇滚手势</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8')">👌 Precision OK <span>OK手势</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9')">👍 Thumbs Up <span>点赞手势</span></button>
+            <button class="action-btn" onclick="triggerDirect('0', '✊')">✊ Fist <span>握拳 (0)</span></button>
+            <button class="action-btn" onclick="triggerDirect('1', '1')">☝️ Index <span>数字 1</span></button>
+            <button class="action-btn" onclick="triggerDirect('2', '2')">✌️ Victory <span>数字 2</span></button>
+            <button class="action-btn" onclick="triggerDirect('3', '3')">👌 OK-3 <span>数字 3</span></button>
+            <button class="action-btn" onclick="triggerDirect('4', '4')">🖐️ Four <span>数字 4</span></button>
+            <button class="action-btn" onclick="triggerDirect('5', '5')">✋ Open <span>数字 5</span></button>
+            <button class="action-btn" onclick="triggerDirect('6', '6')">🤙 Call-Me <span>数字 6</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7', '🤘')">🤘 Rock <span>摇滚大招</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8', '👌')">👌 Precision <span>OK大招</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9', '👍')">👍 ThumbsUp <span>点赞大招</span></button>
         </div>
         <div class="display-container">
             <div id="hugeDisplay" class="huge-display">?</div>
@@ -201,13 +202,12 @@ const EM_DISPLAY = {"0":"✊","1":"☝️","2":"✌️","3":"👌","4":"🖐️"
 const EM_TEXT_DISPLAY = {
     "0": "Fist / 握拳", "1": "Number 1 / 数字 1", "2": "Victory / 数字 2", "3": "Number 3 / 数字 3",
     "4": "Number 4 / 数字 4", "5": "Open Palm / 放松张开", "6": "Call Me / 数字 6",
-    "7": "Rock / 摇滚", "8": "Precision OK / OK", "9": "Thumbs Up / 点赞"
+    "7": "Rock 'N' Roll / 摇滚大招", "8": "Precision OK / OK大招", "9": "Thumbs Up / 点赞大招"
 };
 
 let recognition, isRecording = false, finalTranscript = "", serialWriter = null, currentSTTLanguage = "zh-CN";
 let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
-
-let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {}, activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
+let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {}, activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroInterval = null;
 let lastActionTime = 0;
 
 let currentAngles = [0, 0, 0, 0, 0];
@@ -243,10 +243,12 @@ function manualMotorMove(idx) {
     if(isMacroRecording) {
         let now = Date.now();
         let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
+        if (rehabMacroSequence.length > 0 && typeof rehabMacroSequence[rehabMacroSequence.length-1] === 'object') {
+            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
+        }
         rehabMacroSequence.push({ isCustomAngles: true, angles: [...targetAngles], label: `P${idx}➔${val}°`, delayAfter: 2000 });
         lastActionTime = now;
-        document.getElementById("macroIndicator").textContent = `Captured Slide! (${rehabMacroSequence.length} frames)`;
+        document.getElementById("macroIndicator").textContent = `Captured Slide! (${rehabMacroSequence.length} actions)`;
     }
     
     bezierStartTime = performance.now();
@@ -284,19 +286,19 @@ function toggleMacroRecording() {
     const indicator = document.getElementById("macroIndicator");
     if(!isMacroRecording) {
         stopAnyRunningSequence(); isMacroRecording = true; rehabMacroSequence = []; lastActionTime = Date.now();
-        btn.textContent = "🛑 Stop & Save / 停止并保存"; btn.style.background = "#ff3b3b";
-        indicator.textContent = "Recording... Press buttons or drag sliders below";
+        btn.textContent = "🛑 停止并命名保存 / Stop & Save"; btn.style.background = "#ff3b3b";
+        indicator.textContent = "Recording Sequence...";
     } else {
-        isMacroRecording = false; btn.textContent = "🔴 Start Recording / 开始录制"; btn.style.background = "#f0883b";
+        isMacroRecording = false; btn.textContent = "🔴 开始录制 / Start Recording"; btn.style.background = "#f0883b";
         if(rehabMacroSequence.length > 0) {
             let customName = prompt("Name this sequence:", `Sequence-${Object.keys(globalSequenceLibrary).length + 1}`);
             if (customName && customName.trim() !== "") {
                 let uniqueId = "seq_" + Math.random().toString(36).substr(2, 9);
                 globalSequenceLibrary[uniqueId] = { name: customName.trim(), actions: [...rehabMacroSequence] };
+                currentStepIndexMap[uniqueId] = 0; 
                 renderSequenceLibraryUI();
-                indicator.textContent = "Sequence Saved successfully!";
             }
-        } else { indicator.textContent = "Recording cancelled or empty."; }
+        }
     }
 }
 
@@ -304,12 +306,15 @@ function renderSequenceLibraryUI() {
     const container = document.getElementById("sequenceLibraryContainer");
     let htmlPool = "";
     if(Object.keys(globalSequenceLibrary).length === 0) {
-        container.innerHTML = `<div style="font-size:13px; color:#8b949e; text-align:center; padding:10px;">No saved sequences / 暂无保存动作序列</div>`;
+        container.innerHTML = `<div style="font-size:13px; color:#8b949e; text-align:center; padding:10px;">No saved sequences</div>`;
         return;
     }
     Object.keys(globalSequenceLibrary).forEach(id => {
         let seqData = globalSequenceLibrary[id];
-        let flowChain = seqData.actions.map(item => item.isCustomAngles ? `[${item.label}]` : (EM_DISPLAY[item.key] || item.key)).join(" ➔ ");
+        let flowChain = seqData.actions.map(act => {
+            if(typeof act === 'object' && act.isCustomAngles) return `[${act.label}]`;
+            return EM_DISPLAY[act] || act;
+        }).join(" ➔ ");
         let isRunning = (activeRunningId === id);
         let buttonsHtml = isRunning ? `
             <button class="pause-seq-btn ${isLibraryPaused ? 'btn-is-paused' : ''}" onclick="handleControlClick('${id}', 'pause')">${isLibraryPaused ? '▶️ Resume' : '⏸️ Pause'}</button>
@@ -325,38 +330,60 @@ function renderSequenceLibraryUI() {
 }
 
 function handleControlClick(id, actionType) {
-    if (actionType === 'stop') { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return; }
-    if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); } return; }
-    if (actionType === 'run') { stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
+    if (actionType === 'stop') {
+        if(macroInterval) { clearInterval(macroInterval); macroInterval = null; }
+        activeRunningId = null; isLibraryPaused = false; currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); return;
+    }
+    if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); return; }
+    if (actionType === 'run') {
+        stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); renderSequenceLibraryUI();
+        let seqData = globalSequenceLibrary[id];
+        
+        const executeNext = () => {
+            if (activeRunningId !== id) return;
+            if (isLibraryPaused) {
+                macroInterval = setTimeout(executeNext, 200);
+                return;
+            }
+            let stepIndex = currentStepIndexMap[id] || 0;
+            if(stepIndex >= seqData.actions.length) stepIndex = 0;
+            currentStepIndexMap[id] = stepIndex;
+            
+            let currentStep = seqData.actions[stepIndex];
+            let stepDelay = 2000;
+            
+            if(typeof currentStep === 'object' && currentStep.isCustomAngles) {
+                document.getElementById("hugeDisplay").textContent = "⚙️";
+                document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
+                startAngles = [...currentAngles];
+                targetAngles = [...currentStep.angles];
+                bezierStartTime = performance.now();
+                if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
+                bezierAnimationStep();
+                stepDelay = currentStep.delayAfter || 2000;
+            } else {
+                executeHardwarePipeline(currentStep);
+            }
+            
+            stepIndex = (stepIndex + 1) % seqData.actions.length;
+            currentStepIndexMap[id] = stepIndex;
+            macroInterval = setTimeout(executeNext, stepDelay);
+        };
+        executeNext();
+    }
 }
 
-function executeSequenceStep(id, stepIndex) {
-    if (activeRunningId !== id || isLibraryPaused) return;
-    let seq = globalSequenceLibrary[id].actions;
-    if (stepIndex >= seq.length) stepIndex = 0; 
-    currentStepIndexMap[id] = stepIndex;
-    let currentStep = seq[stepIndex];
-    if(currentStep.isCustomAngles) {
-        document.getElementById("hugeDisplay").textContent = "⚙️"; document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
-        startAngles = [...currentAngles]; targetAngles = [...currentStep.angles]; bezierStartTime = performance.now();
-        if (bezierTimeoutId) clearTimeout(bezierTimeoutId); bezierAnimationStep();
-    } else { executeHardwarePipeline(currentStep.key); }
-    let nextIndex = (stepIndex + 1) % seq.length;
-    let delayTime = currentStep.delayAfter || 2000; 
-    macroTimeoutId = setTimeout(() => { executeSequenceStep(id, nextIndex); }, delayTime);
-}
-
-function stopAnyRunningSequence() { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); }
+function stopAnyRunningSequence() { if(macroInterval) { clearTimeout(macroInterval); macroInterval = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); }
 function deleteSequence(id) { if(activeRunningId === id) stopAnyRunningSequence(); delete globalSequenceLibrary[id]; delete currentStepIndexMap[id]; renderSequenceLibraryUI(); }
 
 async function initSerialPort() {
     try {
-        if (!("serial" in navigator)) { alert("Web Serial not supported on this browser."); return; }
+        if (!("serial" in navigator)) { alert("Web Serial not supported."); return; }
         const serialPort = await navigator.serial.requestPort();
         await serialPort.open({ baudRate: 115200 });
         const textEncoder = new TextEncoderStream(); textEncoder.readable.pipeTo(serialPort.writable);
         serialWriter = textEncoder.writable.getWriter();
-        document.getElementById("connectPortBtn").style.background = "#238636"; document.getElementById("connectPortBtn").textContent = "✅ Serial Connected / 串口并网就绪";
+        document.getElementById("connectPortBtn").style.background = "#238636"; document.getElementById("connectPortBtn").textContent = "✅ Connected!";
         setStatus("Serial Connected.");
     } catch (err) { setStatus("Failed: " + err.message); }
 }
@@ -368,8 +395,13 @@ function executeHardwarePipeline(actionKey) {
     if (POSES_DICTIONARY[keyStr]) {
         document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
         document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
-        startAngles = [...currentAngles]; targetAngles = [...POSES_DICTIONARY[keyStr]]; bezierStartTime = performance.now();
-        if (bezierTimeoutId) clearTimeout(bezierTimeoutId); bezierAnimationStep();
+        
+        startAngles = [...currentAngles];
+        targetAngles = [...POSES_DICTIONARY[keyStr]];
+        bezierStartTime = performance.now();
+        
+        if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
+        bezierAnimationStep();
     }
 }
 
@@ -386,12 +418,16 @@ function bezierAnimationStep() {
     if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } else { bezierTimeoutId = null; }
 }
 
-function triggerDirect(action) {
+function triggerDirect(action, label) {
     let keyStr = String(action).trim();
     if(isMacroRecording) { 
-        let now = Date.now(); let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 }); lastActionTime = now;
+        let now = Date.now();
+        let diff = now - lastActionTime;
+        if (rehabMacroSequence.length > 0 && typeof rehabMacroSequence[rehabMacroSequence.length-1] === 'object') {
+            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
+        }
+        rehabMacroSequence.push(keyStr); 
+        lastActionTime = now;
     }
     executeHardwarePipeline(keyStr); startAutoResetCountdown(); 
 }
@@ -425,72 +461,43 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
-// 🎤 大模型直连解算舱（完美闭合安全盲盒）
+// 🎤 大模型原装纯静态并网通道（完全恢复 V3.6 的原生代码钩子与系统提示词）
 async function askLLM(userText){
+    let apiKey = document.getElementById("apiKey").value.trim(); 
+    if(!apiKey) { apiKey = window.DEEPSEEK_API_KEY || ""; }
+    if(!apiKey){ setStatus("❌ Missing API Key / 缺少密钥"); return; }
+    
+    // 🧠 完璧归赵：全面恢复 V3.6 那行完美不报错、最精准的单个字符回归指令词！
+    const systemPrompt = `You are an expert intent translator for a 5-DOF robotic hand. Strict 0-6 output. CRITICAL MATH RULE: If mathematical question (e.g. "1+1"), solve it first and output raw answer code (e.g. "2"). Output raw JSON like {"ans":"2"}. No markdown.`;
+    
     try{
-        const response = await fetch("/api/chat", {
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body: JSON.stringify({
-                userText:userText
-            })
+        const response = await fetch("https://api.deepseek.com/v1/chat/completions", { 
+            method:"POST", 
+            headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + apiKey }, 
+            body:JSON.stringify({ model:"deepseek-chat", temperature:0.1, messages:[{ role:"system", content:systemPrompt }, { role:"user", content:userText }] }) 
         });
-
-        const data = await response.json();
-
-        let aiResponse = data.choices?.[0]?.message?.content
-            ?.trim()
-            .replace(/```json/g,"")
-            .replace(/```/g,"")
-            .trim();
-
+        const data = await response.json(); 
+        let aiResponse = data.choices?.[0]?.message?.content?.trim().replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(aiResponse);
-
-        if(parsed.hasOwnProperty('ans')){
-            let finalAns = String(parsed.ans).trim();
-
-            if(isMacroRecording){
-                let now = Date.now();
-                let diff = now - lastActionTime;
-
-                if(rehabMacroSequence.length > 0){
-                    rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-                }
-
-                rehabMacroSequence.push({
-                    key: finalAns,
-                    delayAfter: 2000
-                });
-
-                lastActionTime = now;
-            }
-
-            executeHardwarePipeline(finalAns);
+        if(parsed.hasOwnProperty('ans')) { 
+            executeHardwarePipeline(String(parsed.ans).trim()); 
             setStatus("AI intent synchronized successfully.");
-            startAutoResetCountdown();
+            startAutoResetCountdown(); 
         }
-
     }catch(err){
-        console.error(err);
         setStatus("AI Engine analysis failed.");
     }
 }
+
 async function sendAnglesToESP32(p0, p1, p2, p3, p4){
     if (!serialWriter) return;
     try {
         const payloadStr = `{"p0":${p0},"p1":${p1},"p2":${p2},"p3":${p3},"p4":${p4}}\n`;
         await serialWriter.write(payloadStr);
-        document.getElementById("jsonPreview").textContent = `🚀 [Bézier Stream Out] -> ${payloadStr.trim()}`;
+        document.getElementById("jsonPreview").textContent = `🚀 [Bézier Sent] -> ${payloadStr.trim()}`;
     } catch (err) {}
 }
-
-// 🔐 网页初始化：自动恢复本浏览器沙盒里存的密码
-window.onload = () => { 
-    renderSequenceLibraryUI();
-    syncSlidersFromCurrentAngles();
-};
+window.onload = () => { renderSequenceLibraryUI(); syncSlidersFromCurrentAngles(); };
 </script>
 </body>
 </html>
