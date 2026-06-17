@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V8.8</title>
+<title>Embodied AI Soft Robotics Client V9.0</title>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom: 40px; }
@@ -82,7 +82,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:15px; letter-spacing:0.5px; font-weight: 900;">EMBODIED AI SOFT ROBOTICS CLIENT V8.8</h2>
+        <h2 style="font-size:15px; letter-spacing:0.5px; font-weight: 900;">EMBODIED AI SOFT ROBOTICS CLIENT V9.0</h2>
     </div>
     <div class="input-group">
         <input id="apiKey" type="password" value="" placeholder="LLM API Key (Or automatically read from Vercel variables)">
@@ -235,7 +235,6 @@ function manualMotorMove(idx) {
     clearAllTimers();
     let val = parseInt(document.getElementById(`slideM${idx}`).value);
     document.getElementById(`lblM${idx}`).textContent = val + "°";
-    
     document.getElementById("hugeDisplay").textContent = "⚙️";
     document.getElementById("poseTextDisplay").textContent = "Manual Motor Tuning";
     
@@ -246,17 +245,10 @@ function manualMotorMove(idx) {
     if(isMacroRecording) {
         let now = Date.now();
         let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) {
-            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-        }
-        rehabMacroSequence.push({ 
-            isCustomAngles: true, 
-            angles: [...targetAngles], 
-            label: `P${idx}➔${val}°`, 
-            delayAfter: 2000 
-        });
+        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
+        rehabMacroSequence.push({ isCustomAngles: true, angles: [...targetAngles], label: `P${idx}➔${val}°`, delayAfter: 2000 });
         lastActionTime = now;
-        document.getElementById("macroIndicator").textContent = `Captured Slide Frame! (${rehabMacroSequence.length} actions recorded)`;
+        document.getElementById("macroIndicator").textContent = `Captured Slide! (${rehabMacroSequence.length} frames)`;
     }
     
     bezierStartTime = performance.now();
@@ -335,21 +327,9 @@ function renderSequenceLibraryUI() {
 }
 
 function handleControlClick(id, actionType) {
-    if (actionType === 'stop') {
-        if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; }
-        activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return;
-    }
-    if (actionType === 'pause') { 
-        isLibraryPaused = !isLibraryPaused; 
-        renderSequenceLibraryUI(); 
-        if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); }
-        return; 
-    }
-    if (actionType === 'run') {
-        stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers();
-        currentStepIndexMap[id] = 0; renderSequenceLibraryUI();
-        executeSequenceStep(id, 0);
-    }
+    if (actionType === 'stop') { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return; }
+    if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); } return; }
+    if (actionType === 'run') { stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
 }
 
 function executeSequenceStep(id, stepIndex) {
@@ -357,27 +337,15 @@ function executeSequenceStep(id, stepIndex) {
     let seq = globalSequenceLibrary[id].actions;
     if (stepIndex >= seq.length) stepIndex = 0; 
     currentStepIndexMap[id] = stepIndex;
-
     let currentStep = seq[stepIndex];
-    
     if(currentStep.isCustomAngles) {
-        document.getElementById("hugeDisplay").textContent = "⚙️";
-        document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
-        startAngles = [...currentAngles];
-        targetAngles = [...currentStep.angles];
-        bezierStartTime = performance.now();
-        if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
-        bezierAnimationStep();
-    } else {
-        executeHardwarePipeline(currentStep.key);
-    }
-
+        document.getElementById("hugeDisplay").textContent = "⚙️"; document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
+        startAngles = [...currentAngles]; targetAngles = [...currentStep.angles]; bezierStartTime = performance.now();
+        if (bezierTimeoutId) clearTimeout(bezierTimeoutId); bezierAnimationStep();
+    } else { executeHardwarePipeline(currentStep.key); }
     let nextIndex = (stepIndex + 1) % seq.length;
     let delayTime = currentStep.delayAfter || 2000; 
-
-    macroTimeoutId = setTimeout(() => {
-        executeSequenceStep(id, nextIndex);
-    }, delayTime);
+    macroTimeoutId = setTimeout(() => { executeSequenceStep(id, nextIndex); }, delayTime);
 }
 
 function stopAnyRunningSequence() { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); }
@@ -402,11 +370,9 @@ function executeHardwarePipeline(actionKey) {
     if (POSES_DICTIONARY[keyStr]) {
         document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
         document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
-        
         startAngles = [...currentAngles];
         targetAngles = [...POSES_DICTIONARY[keyStr]];
         bezierStartTime = performance.now();
-        
         if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
         bezierAnimationStep();
     }
@@ -416,37 +382,21 @@ function bezierAnimationStep() {
     let now = performance.now();
     let totalDuration = parseInt(document.getElementById("slideDuration").value);
     let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
-    
     let elapsed = now - bezierStartTime;
     let t = Math.min(elapsed / totalDuration, 1);
-    
     let p = t * t * (3 - 2 * t); 
-    
-    for (let i = 0; i < 5; i++) {
-        currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p);
-    }
-    
+    for (let i = 0; i < 5; i++) { currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p); }
     syncSlidersFromCurrentAngles();
     sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-    
-    if (t < 1) {
-        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay);
-    } else {
-        bezierTimeoutId = null;
-    }
+    if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } else { bezierTimeoutId = null; }
 }
 
 function triggerDirect(action) {
     let keyStr = String(action).trim();
     if(isMacroRecording) { 
-        let now = Date.now();
-        let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) {
-            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-        }
-        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 });
-        lastActionTime = now;
-        document.getElementById("macroIndicator").textContent = `Captured: ${EM_DISPLAY[keyStr]} (Recorded ${rehabMacroSequence.length} actions)`;
+        let now = Date.now(); let diff = now - lastActionTime;
+        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
+        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 }); lastActionTime = now;
     }
     executeHardwarePipeline(keyStr); startAutoResetCountdown(); 
 }
@@ -483,55 +433,29 @@ function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezier
 async function askLLM(userText){
     let apiKey = document.getElementById("apiKey").value.trim(); 
     
-    // 🚀【你上次成功的原装捕获钩子归位】
+    // 🚀【唯一变量自动并网隧道】：Vercel 静态替换指令挂钩点
     if(!apiKey) { 
-        apiKey = window.DEEPSEEK_API_KEY || ""; 
+        apiKey = "%%DEEPSEEK_SECRET_KEY%%"; 
     }
     
-    if(!apiKey){ setStatus("❌ API Key Missing"); return; }
+    if(!apiKey || apiKey.startsWith("%%")){ setStatus("❌ API Key Missing"); return; }
     
-    const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
-Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
-
-CRITICAL PREDEFINED ACTIONS MAP:
-"0": Fist (Represents anger, power, closed hand)
-"1": Index finger (Represents pointing, number 1)
-"2": Victory gesture / Scissors (Represents peace, happiness, "Cheese" for taking photos, "比个耶")
-"3": Number 3 gesture
-"4": Number 4 gesture
-"5": Open palm (Represents waving hello/goodbye, relaxation, high-five)
-"6": Call-Me sign
-"7": Rock sign
-"8": Precision OK sign
-"9": Thumbs Up sign (Represents praise, excitement, agreement, saying "good/happy/perfect")
-
-BEHAVIOR RULES:
-- If the user wants to play rock-paper-scissors, randomly output "0", "2", or "5".
-- If the user expresses joy or praise, select "9" or "2".
-- If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
-
-Output ONLY a raw JSON like {"ans":"2"}. Do not output markdown code blocks or any other explanation.`;
+    const systemPrompt = `You are the brain of an autonomous embodied robotic hand. Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion. Action Map: "0":Fist, "1":Index, "2":Victory/"比个耶", "3":Num3, "4":Num4, "5":Open palm, "6":Call-Me, "7":Rock, "8":OK, "9":Thumbs Up. Behavior Rules: If rock-paper-scissors game is played, output 0, 2 or 5 randomly. If joy/praise is expressed, select 9 or 2. If user says "比个耶" or "take a photo", you MUST output "2". Output ONLY a raw JSON like {"ans":"2"}. No markdown blocks.`;
 
     try{
         const response = await fetch("https://api.deepseek.com/v1/chat/completions", { 
             method:"POST", 
             headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + apiKey }, 
-            body:JSON.stringify({ 
-                model:"deepseek-chat", 
-                temperature:0.7, 
-                messages:[{ role:"system", content:systemPrompt }, { role:"user", content:userText }] 
-            }) 
+            body:JSON.stringify({ model:"deepseek-chat", temperature:0.7, messages:[{ role:"system", content:systemPrompt }, { role:"user", content:userText }] }) 
         });
         const data = await response.json(); let aiResponse = data.choices?.[0]?.message?.content?.trim().replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(aiResponse);
         if(parsed.hasOwnProperty('ans')) { 
             let finalAns = String(parsed.ans).trim();
             if(isMacroRecording) {
-                let now = Date.now();
-                let diff = now - lastActionTime;
+                let now = Date.now(); let diff = now - lastActionTime;
                 if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 });
-                lastActionTime = now;
+                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 }); lastActionTime = now;
             }
             executeHardwarePipeline(finalAns); 
             setStatus("AI intent synchronized successfully.");
