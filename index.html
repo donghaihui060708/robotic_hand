@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V9.6</title>
+<title>Embodied AI Soft Robotics Client V9.5</title>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom: 40px; }
@@ -61,7 +61,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #recordBtn { background: linear-gradient(145deg,#238636,#2ea043); box-shadow:0 0 20px rgba(46,160,67,0.2); }
 #recordBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
 #stopBtn { background: linear-gradient(145deg,#b30000,#ff3b3b); box-shadow:0 0 20px rgba(255,59,59,0.2); }
-#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(255,59,59,0.4); }
+#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
 .recording { animation: pulse 1.2s infinite; background: #ff3b3b !important; }
 #speechText { font-size:20px; color:#58a6ff; min-height:32px; text-align: center; font-style: italic; margin-bottom: 8px; font-weight: 500; }
 #status { font-size:14px; color:#f0b429; text-align: center; font-family: monospace; }
@@ -82,10 +82,10 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:15px; letter-spacing:0.5px; font-weight: 900;">EMBODIED AI SOFT ROBOTICS CLIENT V9.6</h2>
+        <h2 style="font-size:15px; letter-spacing:0.5px; font-weight: 900;">EMBODIED AI SOFT ROBOTICS CLIENT V9.5</h2>
     </div>
     <div class="input-group">
-        <input id="apiKey" type="password" value="" placeholder="LLM API Key (Or automatically read from Vercel variables)">
+        <input id="apiKey" type="password" value="" placeholder="🔑 LLM API Key (Will be saved in your local browser sandbox safely)" oninput="localStorage.setItem('DEEPSEEK_SAVED_KEY', this.value)">
     </div>
     <button id="connectPortBtn" onclick="initSerialPort()">🔌 Connect Type-C Wire / 连接数据线串口</button>
 </div>
@@ -427,15 +427,11 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
-// 🔒 智能并网：优先读框，框空则调用 Vercel 保密注入
+// 🎤 大模型直连解算舱（完美闭合安全盲盒）
 async function askLLM(userText){
     let apiKey = document.getElementById("apiKey").value.trim(); 
     
-    if(!apiKey) { 
-        apiKey = window.DEEPSEEK_API_KEY || ""; 
-    }
-    
-    if(!apiKey){ setStatus("❌ Missing API Key / 缺少密钥"); return; }
+    if(!apiKey) { setStatus("❌ Missing API Key / 缺少密钥"); return; }
     
     const systemPrompt = `You are the brain of an autonomous embodied robotic hand. Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion. Action Map: "0":Fist, "1":Index, "2":Victory/"比个耶", "3":Num3, "4":Num4, "5":Open palm, "6":Call-Me, "7":Rock, "8":OK, "9":Thumbs Up. Behavior Rules: If rock-paper-scissors game is played, output 0, 2 or 5 randomly. If joy/praise is expressed, select 9 or 2. If user says "比个耶" or "take a photo", you MUST output "2". Output ONLY a raw JSON like {"ans":"2"}. No markdown blocks.`;
 
@@ -469,7 +465,14 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4){
         document.getElementById("jsonPreview").textContent = `🚀 [Bézier Stream Out] -> ${payloadStr.trim()}`;
     } catch (err) {}
 }
-window.onload = () => { renderSequenceLibraryUI(); syncSlidersFromCurrentAngles(); };
+
+// 🔐 网页初始化：自动恢复本浏览器沙盒里存的密码
+window.onload = () => { 
+    renderSequenceLibraryUI(); 
+    let savedKey = localStorage.getItem('DEEPSEEK_SAVED_KEY');
+    if(savedKey) { document.getElementById("apiKey").value = savedKey; }
+    syncSlidersFromCurrentAngles(); 
+};
 </script>
 </body>
 </html>
