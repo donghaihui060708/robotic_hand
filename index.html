@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V9.6</title>
+<title>Embodied AI Soft Robotics Client V9.7</title>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom: 40px; }
@@ -47,10 +47,6 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .pause-seq-btn.btn-is-paused { background: #238636 !important; color: white; } 
 .del-seq-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
 .del-seq-btn:hover { background: #b30000; color: white; border-color: #b30000; }
-.text-chat-box { display: flex; gap: 10px; margin-bottom: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; }
-.text-chat-box input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 6px; }
-.text-chat-box button { background: #238636; color: white; border: none; padding: 0 22px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-.text-chat-box button:hover { background: #2ea043; }
 .lang-selector-box { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; background: #161b22; padding: 8px 15px; border-radius: 8px; width: fit-content; border: 1px solid #21262d; }
 .lang-radio { cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #8b949e; }
 .lang-radio input { width: auto; cursor: pointer; accent-color: #388bfd; }
@@ -81,10 +77,10 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 <div class="header">
     <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:12px; height:12px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14;"></div>
-        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V9.6</h2>
+        <h2 style="font-size:16px; letter-spacing:0.5px;">EMBODIED AI SOFT ROBOTICS CLIENT V9.7</h2>
     </div>
     <div class="input-group">
-        <input id="apiKey" type="password" value="" placeholder="LLM API Key (Or automatically read from Vercel variables)">
+        <input id="apiKey" type="password" value="" placeholder="LLM API Key (Automatically synced across machines via Vercel Edge)">
     </div>
     <button id="connectPortBtn" onclick="initSerialPort()">🔌 Connect Type-C Wire</button>
 </div>
@@ -461,13 +457,17 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
-// 🎤 大模型原装纯静态并网通道（完全恢复 V3.6 的原生代码钩子与系统提示词）
+// 🎤 全球任意电脑通用·保密级并网通道
 async function askLLM(userText){
     let apiKey = document.getElementById("apiKey").value.trim(); 
-    if(!apiKey) { apiKey = window.DEEPSEEK_API_KEY || ""; }
+    
+    // 🔗【无配置绝杀钩子】：在这里同时拦截并检测两个变量名
+    if(!apiKey) { 
+        apiKey = window.NEXT_PUBLIC_DEEPSEEK_API_KEY || window.DEEPSEEK_API_KEY || ""; 
+    }
+    
     if(!apiKey){ setStatus("❌ Missing API Key / 缺少密钥"); return; }
     
-    // 🧠 完璧归赵：全面恢复 V3.6 那行完美不报错、最精准的单个字符回归指令词！
     const systemPrompt = `You are an expert intent translator for a 5-DOF robotic hand. Strict 0-6 output. CRITICAL MATH RULE: If mathematical question (e.g. "1+1"), solve it first and output raw answer code (e.g. "2"). Output raw JSON like {"ans":"2"}. No markdown.`;
     
     try{
