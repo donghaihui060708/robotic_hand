@@ -61,7 +61,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #recordBtn { background: linear-gradient(145deg,#238636,#2ea043); box-shadow:0 0 20px rgba(46,160,67,0.2); }
 #recordBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
 #stopBtn { background: linear-gradient(145deg,#b30000,#ff3b3b); box-shadow:0 0 20px rgba(255,59,59,0.2); }
-#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
+#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(255,59,59,0.4); }
 .recording { animation: pulse 1.2s infinite; background: #ff3b3b !important; }
 #speechText { font-size:20px; color:#58a6ff; min-height:32px; text-align: center; font-style: italic; margin-bottom: 8px; font-weight: 500; }
 #status { font-size:14px; color:#f0b429; text-align: center; font-family: monospace; }
@@ -243,21 +243,11 @@ function manualMotorMove(idx) {
     targetAngles = [...currentAngles];
     targetAngles[idx] = val;
     
-    // 🚀【硬核升级：无缝拉网拦截手动滑块姿态】
     if(isMacroRecording) {
         let now = Date.now();
         let diff = now - lastActionTime;
-        // 如果这不是录制的第一个动作，更新上一个动作卡片的停留时间（还原真实调试节奏）
-        if (rehabMacroSequence.length > 0) {
-            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-        }
-        // 直接将当前一瞬间的5轴物理状态作为独立动作帧推入时间轴
-        rehabMacroSequence.push({ 
-            isCustomAngles: true, 
-            angles: [...targetAngles], 
-            label: `P${idx}➔${val}°`, 
-            delayAfter: 2000 
-        });
+        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
+        rehabMacroSequence.push({ isCustomAngles: true, angles: [...targetAngles], label: `P${idx}➔${val}°`, delayAfter: 2000 });
         lastActionTime = now;
         document.getElementById("macroIndicator").textContent = `Captured Slide Frame! (${rehabMacroSequence.length} actions recorded)`;
     }
@@ -267,6 +257,7 @@ function manualMotorMove(idx) {
     bezierAnimationStep();
 }
 
+// 修改语言辅助配置
 function switchSTTLanguage(lang) {
     currentSTTLanguage = lang;
     document.getElementById("lbl-zh").classList.toggle("active-lang", lang === "zh-CN");
@@ -322,7 +313,6 @@ function renderSequenceLibraryUI() {
     }
     Object.keys(globalSequenceLibrary).forEach(id => {
         let seqData = globalSequenceLibrary[id];
-        // 🚀 智能流式渲染：如果是滑块录出来的自定义姿态，显示对应动作标号
         let flowChain = seqData.actions.map(item => item.isCustomAngles ? `[${item.label}]` : (EM_DISPLAY[item.key] || item.key)).join(" ➔ ");
         let isRunning = (activeRunningId === id);
         let buttonsHtml = isRunning ? `
@@ -339,21 +329,9 @@ function renderSequenceLibraryUI() {
 }
 
 function handleControlClick(id, actionType) {
-    if (actionType === 'stop') {
-        if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; }
-        activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return;
-    }
-    if (actionType === 'pause') { 
-        isLibraryPaused = !isLibraryPaused; 
-        renderSequenceLibraryUI(); 
-        if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); }
-        return; 
-    }
-    if (actionType === 'run') {
-        stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers();
-        currentStepIndexMap[id] = 0; renderSequenceLibraryUI();
-        executeSequenceStep(id, 0);
-    }
+    if (actionType === 'stop') { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return; }
+    if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); } return; }
+    if (actionType === 'run') { stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
 }
 
 function executeSequenceStep(id, stepIndex) {
@@ -361,28 +339,14 @@ function executeSequenceStep(id, stepIndex) {
     let seq = globalSequenceLibrary[id].actions;
     if (stepIndex >= seq.length) stepIndex = 0; 
     currentStepIndexMap[id] = stepIndex;
-
     let currentStep = seq[stepIndex];
-    
-    // 🚀 回放兼容引擎：区分按键帧还是滑块轴位帧
     if(currentStep.isCustomAngles) {
-        document.getElementById("hugeDisplay").textContent = "⚙️";
-        document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
-        startAngles = [...currentAngles];
-        targetAngles = [...currentStep.angles];
-        bezierStartTime = performance.now();
-        if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
-        bezierAnimationStep();
-    } else {
-        executeHardwarePipeline(currentStep.key);
-    }
-
-    let nextIndex = (stepIndex + 1) % seq.length;
-    let delayTime = currentStep.delayAfter || 2000; 
-
-    macroTimeoutId = setTimeout(() => {
-        executeSequenceStep(id, nextIndex);
-    }, delayTime);
+        document.getElementById("hugeDisplay").textContent = "⚙️"; document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
+        startAngles = [...currentAngles]; targetAngles = [...currentStep.angles]; bezierStartTime = performance.now();
+        if (bezierTimeoutId) clearTimeout(bezierTimeoutId); bezierAnimationStep();
+    } else { executeHardwarePipeline(currentStep.key); }
+    let nextIndex = (stepIndex + 1) % seq.length; let delayTime = currentStep.delayAfter || 2000; 
+    macroTimeoutId = setTimeout(() => { executeSequenceStep(id, nextIndex); }, delayTime);
 }
 
 function stopAnyRunningSequence() { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); }
@@ -418,53 +382,27 @@ function executeHardwarePipeline(actionKey) {
 }
 
 function bezierAnimationStep() {
-    let now = performance.now();
-    let totalDuration = parseInt(document.getElementById("slideDuration").value);
-    let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
-    
-    let elapsed = now - bezierStartTime;
-    let t = Math.min(elapsed / totalDuration, 1);
-    
-    let p = t * t * (3 - 2 * t); 
-    
-    for (let i = 0; i < 5; i++) {
-        currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p);
-    }
-    
-    syncSlidersFromCurrentAngles();
-    sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-    
-    if (t < 1) {
-        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay);
-    } else {
-        bezierTimeoutId = null;
-    }
+    let now = performance.now(); let totalDuration = parseInt(document.getElementById("slideDuration").value); let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
+    let elapsed = now - bezierStartTime; let t = Math.min(elapsed / totalDuration, 1); let p = t * t * (3 - 2 * t); 
+    for (let i = 0; i < 5; i++) { currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p); }
+    syncSlidersFromCurrentAngles(); sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
+    if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } else { bezierTimeoutId = null; }
 }
 
 function triggerDirect(action) {
     let keyStr = String(action).trim();
     if(isMacroRecording) { 
-        let now = Date.now();
-        let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) {
-            rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-        }
-        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 });
-        lastActionTime = now;
-        document.getElementById("macroIndicator").textContent = `Captured: ${EM_DISPLAY[keyStr]} (Recorded ${rehabMacroSequence.length} actions)`;
+        let now = Date.now(); let diff = now - lastActionTime;
+        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
+        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 }); lastActionTime = now;
     }
     executeHardwarePipeline(keyStr); startAutoResetCountdown(); 
 }
 
 function sendTextMessage() {
-    stopAnyRunningSequence();
-    let txt = document.getElementById("textInput").value.trim();
-    if(!txt) return;
-    clearAllTimers();
-    document.getElementById("speechText").textContent = `"${txt}"`;
-    setStatus("AI thinking... / 智能解算中...");
-    askLLM(txt);
-    document.getElementById("textInput").value = "";
+    stopAnyRunningSequence(); let txt = document.getElementById("textInput").value.trim(); if(!txt) return;
+    clearAllTimers(); document.getElementById("speechText").textContent = `"${txt}"`; setStatus("AI thinking... / 智能解算中...");
+    askLLM(txt); document.getElementById("textInput").value = "";
 }
 
 function initRecognition(){
@@ -473,10 +411,7 @@ function initRecognition(){
     recognition.onstart = () => { isRecording = true; document.getElementById("recordBtn").classList.add("recording"); };
     recognition.onresult = (event) => {
         let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " ";
-            else interimTranscript += event.results[i][0].transcript;
-        }
+        for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " "; else interimTranscript += event.results[i][0].transcript; }
         document.getElementById("speechText").textContent = `"${finalTranscript + interimTranscript}"`;
     };
     recognition.onend = () => { document.getElementById("recordBtn").classList.remove("recording"); if(!isRecording && finalTranscript.trim() !== "") { setStatus("AI thinking... / 智能解算中..."); askLLM(finalTranscript.trim()); } };
@@ -485,6 +420,7 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
+// 🤖 大模型核心交互解算引擎（已精准补全数学计算铁律）
 async function askLLM(userText){
     let apiKey = document.getElementById("apiKey").value.trim(); 
     if(!apiKey) { 
@@ -492,6 +428,7 @@ async function askLLM(userText){
     }
     if(!apiKey || apiKey.startsWith("process.env")){ setStatus("❌ API Key Missing"); return; }
     
+    // 🧠 核心修复：将数学优先执行铁律无损织入 V8.5 系统提示词中
     const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
 Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
 
@@ -506,6 +443,9 @@ CRITICAL PREDEFINED ACTIONS MAP:
 "7": Rock sign
 "8": Precision OK sign
 "9": Thumbs Up sign (Represents praise, excitement, agreement, saying "good/happy/perfect")
+
+CRITICAL MATH RULE:
+- If the user asks a mathematical calculation question (e.g. "1+1", "3-1"), you MUST solve the math expression first to get the numerical result (e.g. 1+1=2, 3-1=2). Then, use that single-digit numerical result to select the corresponding action code from the MAP above (e.g. if the result is 2, output "2").
 
 BEHAVIOR RULES:
 - If the user wants to play rock-paper-scissors, randomly output "0", "2", or "5".
@@ -529,11 +469,9 @@ Output ONLY a raw JSON like {"ans":"2"}. Do not output markdown code blocks or a
         if(parsed.hasOwnProperty('ans')) { 
             let finalAns = String(parsed.ans).trim();
             if(isMacroRecording) {
-                let now = Date.now();
-                let diff = now - lastActionTime;
+                let now = Date.now(); let diff = now - lastActionTime;
                 if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 });
-                lastActionTime = now;
+                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 }); lastActionTime = now;
             }
             executeHardwarePipeline(finalAns); 
             setStatus("AI intent synchronized successfully.");
