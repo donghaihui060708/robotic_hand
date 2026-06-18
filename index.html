@@ -558,30 +558,29 @@ document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRu
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
 async function askLLM(userText){    
-	const randomSeed = Math.floor(Math.random() * 1000) + 1;
-   	const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
+    const rpsOptions = ["0", "2", "5"];
+    const rpsAns = rpsOptions[Math.floor(Math.random() * rpsOptions.length)];
+
+    const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
 Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
 
 CRITICAL PREDEFINED ACTIONS MAP:
-"0": Fist (Represents anger, power, closed hand)
+"0": Fist (Represents anger, power, closed hand, Rock in rock-paper-scissors)
 "1": Index finger (Represents pointing, number 1)
-"2": Victory gesture / Scissors (Represents peace, happiness, "Cheese" for taking photos, "比个耶")
+"2": Victory gesture / Scissors (Represents peace, happiness, "Cheese" for taking photos, "比个耶", Scissors in rock-paper-scissors)
 "3": Number 3 gesture
 "4": Number 4 gesture
-"5": Open palm (Represents waving hello/goodbye, relaxation, high-five)
+"5": Open palm (Represents waving hello/goodbye, relaxation, high-five, Paper in rock-paper-scissors)
 "6": Call-Me sign
 "7": Rock sign
 "8": Precision OK sign
 "9": Thumbs Up sign (Represents praise, excitement, agreement, saying "good/happy/perfect")
 
 CRITICAL MATH RULE:
-- If the user asks a mathematical calculation question (e.g. "1+1", "3-1"), you MUST solve the math expression first to get the numerical result (e.g. 1+1=2, 3-1=2). Then, use that single-digit numerical result to select the corresponding action code from the MAP above (e.g. if the result is 2, output "2").
+- If the user asks a mathematical calculation question (e.g. "1+1", "3-1"), you MUST solve the math expression first to get the numerical result. Then, use that single-digit numerical result to select the corresponding action code.
 
 BEHAVIOR RULES:
-- If the user wants to play rock-paper-scissors, use the RANDOM SEED provided by the user message.
-- If RANDOM SEED mod 3 = 0, output "0" for Rock/Fist.
-- If RANDOM SEED mod 3 = 1, output "2" for Scissors/Victory.
-- If RANDOM SEED mod 3 = 2, output "5" for Paper/Open palm.
+- If the user wants to play rock-paper-scissors, you MUST output the forced RPS answer provided in the user message.
 - If the user expresses joy or praise, select "9" or "2".
 - If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
 
@@ -595,11 +594,14 @@ Output ONLY a raw JSON like {"ans":"2"}. Do not output markdown code blocks or a
                 model:"deepseek-chat", 
                 temperature:0.7, 
                 messages:[
-    			{ role:"system", content:systemPrompt },
-    			{ 
-        			role:"user", 
-        			content:`User command: ${userText}\nRANDOM SEED: ${randomSeed}` 
-   			 }
+    		{ role:"system", content:systemPrompt },
+   		{ 
+        		role:"user", 
+        		content:`User command: ${userText}
+
+		Forced RPS answer if this is rock-paper-scissors:
+		{"ans":"${rpsAns}"}`
+  	  	      }
 		]
             }) 
         });
@@ -625,7 +627,6 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
 
     try {
 
-        // Type-C 不限速，直接发
         if (serialWriter) {
             await serialWriter.write(payloadStr + "\n");
 
@@ -635,7 +636,6 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
             return;
         }
 
-        // 只有 BLE 才限速
         if (bleCharacteristic) {
             const now = Date.now();
 
