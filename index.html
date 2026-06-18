@@ -584,6 +584,26 @@ BEHAVIOR RULES:
 - If the user expresses joy or praise, select "9" or "2".
 - If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
 
+MODE SELECTION RULE:
+- Use single mode when the user asks for one clear static gesture, number, emotion, or simple command.
+Examples:
+"比个耶" -> single
+"点赞" -> single
+"握拳" -> single
+"张开" -> single
+"show number 2" -> single
+"1+1" -> single
+
+- Use custom_sequence mode when the user asks for movement over time, repeated motion, exercise, dancing, waving, relaxing, thinking, emotion performance, animal imitation, or any command that sounds like an action process.
+Examples:
+"做一个手指操" -> custom_sequence
+"wave hello" -> custom_sequence
+"do a happy motion" -> custom_sequence
+"relax slowly" -> custom_sequence
+"dance" -> custom_sequence
+"像蛇一样动" -> custom_sequence
+"手指依次弯曲再展开" -> custom_sequence
+
 CUSTOM MOTION RULE:
 - If the user asks for finger exercise, 手指操, rehabilitation exercise, warm up fingers, continuous motion, custom motion, emotion expression, greeting, wave hello, celebrate, relax, nervous, thinking, animal imitation, dance, or music rhythm, output custom_sequence mode.
 - You must generate a continuous natural hand motion using custom angles.
