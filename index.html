@@ -519,13 +519,35 @@ function executeHardwarePipeline(actionKey) {
 }
 
 function bezierAnimationStep() {
-    let now = performance.now(); let totalDuration = parseInt(document.getElementById("slideDuration").value); let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
-    let elapsed = now - bezierStartTime; let t = Math.min(elapsed / totalDuration, 1); let p = t * t * (3 - 2 * t); 
-    for (let i = 0; i < 5; i++) { currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p); }
-    syncSlidersFromCurrentAngles(); sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-    if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } else { bezierTimeoutId = null; }
-}
+    let now = performance.now();
+    let totalDuration = parseInt(document.getElementById("slideDuration").value);
+    let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
 
+    if (bleCharacteristic && !serialWriter) {
+        sendBLETargetAngles(targetAngles, totalDuration);
+        currentAngles = [...targetAngles];
+        syncSlidersFromCurrentAngles();
+        bezierTimeoutId = null;
+        return;
+    }
+
+    let elapsed = now - bezierStartTime;
+    let t = Math.min(elapsed / totalDuration, 1);
+    let p = t * t * (3 - 2 * t);
+
+    for (let i = 0; i < 5; i++) {
+        currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p);
+    }
+
+    syncSlidersFromCurrentAngles();
+    sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
+
+    if (t < 1) {
+        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay);
+    } else {
+        bezierTimeoutId = null;
+    }
+}
 function triggerDirect(action) {
     let keyStr = String(action).trim();
     if(isMacroRecording) { 
@@ -711,6 +733,40 @@ Custom sequence:
             startAutoResetCountdown(); 
         }
     }catch(err){ setStatus("AI Engine analysis failed."); }
+}
+
+async function sendBLETargetAngles(angles, duration) {
+    if (!bleCharacteristic) return;
+
+    try {
+        if (bleWriteBusy) return;
+
+        bleWriteBusy = true;
+
+        const payloadStr = JSON.stringify({
+            mode: "target",
+            p0: angles[0],
+            p1: angles[1],
+            p2: angles[2],
+            p3: angles[3],
+            p4: angles[4],
+            duration: duration
+        });
+
+        const encoder = new TextEncoder();
+        await bleCharacteristic.writeValue(
+            encoder.encode(payloadStr)
+        );
+
+        bleWriteBusy = false;
+
+        document.getElementById("jsonPreview").textContent =
+            "🔵 BLE Target -> " + payloadStr;
+
+    } catch (err) {
+        bleWriteBusy = false;
+        setStatus("BLE target send failed: " + err.message);
+    }
 }
 
 async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
