@@ -557,10 +557,9 @@ function initRecognition(){
 document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
 function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
-// 🤖 大模型核心交互解算引擎（已精准补全数学计算铁律）
 async function askLLM(userText){    
-    // 🧠 核心修复：将数学优先执行铁律无损织入 V8.5 系统提示词中
-    const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
+	const randomSeed = Math.floor(Math.random() * 1000) + 1;
+   	const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
 Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
 
 CRITICAL PREDEFINED ACTIONS MAP:
@@ -579,7 +578,10 @@ CRITICAL MATH RULE:
 - If the user asks a mathematical calculation question (e.g. "1+1", "3-1"), you MUST solve the math expression first to get the numerical result (e.g. 1+1=2, 3-1=2). Then, use that single-digit numerical result to select the corresponding action code from the MAP above (e.g. if the result is 2, output "2").
 
 BEHAVIOR RULES:
-- If the user wants to play rock-paper-scissors, randomly output "0", "2", or "5".
+- If the user wants to play rock-paper-scissors, use the RANDOM SEED provided by the user message.
+- If RANDOM SEED mod 3 = 0, output "0" for Rock/Fist.
+- If RANDOM SEED mod 3 = 1, output "2" for Scissors/Victory.
+- If RANDOM SEED mod 3 = 2, output "5" for Paper/Open palm.
 - If the user expresses joy or praise, select "9" or "2".
 - If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
 
@@ -592,7 +594,13 @@ Output ONLY a raw JSON like {"ans":"2"}. Do not output markdown code blocks or a
             body:JSON.stringify({ 
                 model:"deepseek-chat", 
                 temperature:0.7, 
-                messages:[{ role:"system", content:systemPrompt }, { role:"user", content:userText }] 
+                messages:[
+    			{ role:"system", content:systemPrompt },
+    			{ 
+        			role:"user", 
+        			content:`User command: ${userText}\nRANDOM SEED: ${randomSeed}` 
+   			 }
+		]
             }) 
         });
         const data = await response.json(); let aiResponse = data.choices?.[0]?.message?.content?.trim().replace(/```json/g, "").replace(/```/g, "").trim();
