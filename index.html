@@ -586,26 +586,38 @@ BEHAVIOR RULES:
 
 CUSTOM MOTION RULE:
 - If the user asks for 手指操, finger exercise, rehabilitation exercise, hand dance, continuous motion, custom motion, warm up fingers, or finger training, output custom_sequence mode.
-- Generate a natural progressive wave motion.
-- Gradually curl from open hand to fist.
-- Then gradually open back to relaxed hand.
-- Use smooth angle transitions.
-- Do not jump directly from 0 to 180.
-- Avoid strange or unsafe poses.
-- Use 10-20 steps.
-- Angle range must stay between 0 and 180.
-- Use delay between 150 and 350 ms.
-- Hold 500-800 ms at full fist and full open.
+- Generate a thumb-to-pinky progressive wave curl.
+- Curling direction must be thumb -> index -> middle -> ring -> pinky.
+- Opening direction must be the reverse: pinky -> ring -> middle -> index -> thumb.
+- Use 30 degree offset between neighboring fingers.
+- Do not make all five fingers move together.
+- Do not wait for one finger to fully curl before the next finger starts.
+- The motion must overlap like a wave.
+- 0 means fully open. 180 means fully curled.
+- Use this exact style:
 
-Output format:
-
-Single action:
-{"mode":"single","ans":"2"}
-
-Custom sequence:
 {"mode":"custom_sequence","actions":[
-{"angles":[0,0,0,0,0],"delay":300},
-{"angles":[20,0,0,0,0],"delay":200}
+{"angles":[0,0,0,0,0],"delay":250},
+{"angles":[30,0,0,0,0],"delay":200},
+{"angles":[60,30,0,0,0],"delay":200},
+{"angles":[90,60,30,0,0],"delay":200},
+{"angles":[120,90,60,30,0],"delay":200},
+{"angles":[150,120,90,60,30],"delay":200},
+{"angles":[180,150,120,90,60],"delay":200},
+{"angles":[180,180,150,120,90],"delay":200},
+{"angles":[180,180,180,150,120],"delay":200},
+{"angles":[180,180,180,180,150],"delay":200},
+{"angles":[180,180,180,180,180],"delay":700},
+{"angles":[180,180,180,180,150],"delay":200},
+{"angles":[180,180,180,150,120],"delay":200},
+{"angles":[180,180,150,120,90],"delay":200},
+{"angles":[180,150,120,90,60],"delay":200},
+{"angles":[150,120,90,60,30],"delay":200},
+{"angles":[120,90,60,30,0],"delay":200},
+{"angles":[90,60,30,0,0],"delay":200},
+{"angles":[60,30,0,0,0],"delay":200},
+{"angles":[30,0,0,0,0],"delay":200},
+{"angles":[0,0,0,0,0],"delay":700}
 ]}`;
     try{
         const response = await fetch("/api/chat", { 
