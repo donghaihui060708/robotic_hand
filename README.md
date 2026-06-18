@@ -1,4 +1,20 @@
-<p align="right">
+<p align="center">
+
+&#x20; <h1 align="center">🤖 Embodied AI Soft Robotic Hand</h1>
+
+</p>
+
+
+
+<p align="center">
+
+A tendon-driven silicone robotic hand controlled by ESP32, Web Interface and AI Voice Commands.
+
+</p>
+
+
+
+<p align="center">
 
 English | <a href="./README\_CN.md">中文</a>
 
@@ -6,11 +22,19 @@ English | <a href="./README\_CN.md">中文</a>
 
 
 
-\# 🤖 Embodied AI Soft Robotic Hand
+\---
 
 
 
-A tendon-driven silicone robotic hand controlled through ESP32 microcontrollers, a web-based interface, and AI-powered voice commands.
+\# 0. 📖 Introduction
+
+
+
+This project presents an embodied AI soft robotic hand capable of performing natural finger movements through a tendon-driven actuation system. The robotic hand is controlled by ESP32 microcontrollers and can be operated through a browser-based dashboard or AI-powered voice commands.
+
+
+
+The goal of the project is to combine soft robotics, embedded systems, wireless communication and artificial intelligence into a single interactive platform. By integrating a web interface with large language model (LLM) capabilities, users can control the robotic hand using natural language instead of traditional control methods.
 
 
 
@@ -18,85 +42,27 @@ A tendon-driven silicone robotic hand controlled through ESP32 microcontrollers,
 
 
 
-\## 📖 Overview
+\# 1. ✨ Features
 
 
 
-This project aims to develop a soft robotic hand capable of performing natural finger movements through servo-driven tendon actuation.
+\* Real-time finger control
 
+\* Independent control of all five fingers
 
+\* Preset hand gestures
 
-The system combines embedded systems, wireless communication, web technologies, and artificial intelligence to create an intuitive human–robot interaction platform.
+\* AI voice command interaction
 
-
-
-Users can control the robotic hand through a browser-based dashboard or natural language voice commands interpreted by a large language model (LLM).
-
-
-
-\---
-
-
-
-\## ✨ Features
-
-
-
-\### 🌐 Web Control Interface
-
-
-
-\* Individual finger control
-
-\* Real-time hand operation
-
-\* Preset gesture execution
-
-\* Communication status monitoring
-
-\* Modern dark-themed dashboard
-
-
-
-\### 🤖 AI Voice Control
-
-
-
-\* Speech recognition
-
-\* Natural language command interpretation
-
-\* AI-generated hand actions
-
-
-
-Example commands:
-
-
-
-\* Open the hand
-
-\* Close the hand
-
-\* Make a fist
-
-\* Point with the index finger
-
-\* Thumbs up
-
-
-
-\### 📡 Wireless Communication
-
-
-
-\* ESP32-based architecture
+\* Natural language understanding
 
 \* BLE communication
 
-\* USB Serial communication
+\* USB serial communication
 
-\* ESP-NOW data transmission
+\* ESP-NOW wireless transmission
+
+\* Modern web-based dashboard
 
 
 
@@ -104,7 +70,7 @@ Example commands:
 
 
 
-\## 🏗 System Architecture
+\# 2. 🏗 System Architecture
 
 
 
@@ -148,19 +114,7 @@ Soft Robotic Hand
 
 
 
-\## 🔧 Hardware
-
-
-
-\* Seeed Studio XIAO ESP32S3
-
-\* PCA9685 Servo Driver
-
-\* Servo Motors × 5
-
-\* Tendon-driven Mechanism
-
-\* Silicone Soft Robotic Hand
+The web dashboard sends control commands to the ESP32 transmitter through either BLE or USB communication. Commands are then transmitted wirelessly via ESP-NOW to the receiver ESP32, which drives the servo motors through a PCA9685 controller to actuate the silicone robotic hand.
 
 
 
@@ -168,7 +122,29 @@ Soft Robotic Hand
 
 
 
-\## 💻 Software Stack
+\# 3. 🔧 Hardware
+
+
+
+\* Seeed Studio XIAO ESP32S3
+
+\* PCA9685 Servo Driver
+
+\* 5 Servo Motors
+
+\* Tendon-driven Mechanism
+
+\* Silicone Soft Robotic Hand
+
+\* USB Type-C Communication
+
+
+
+\---
+
+
+
+\# 4. 💻 Software Stack
 
 
 
@@ -204,15 +180,13 @@ Soft Robotic Hand
 
 \* DeepSeek API
 
-\* Web Speech API
-
 
 
 \---
 
 
 
-\## 📂 Project Structure
+\# 5. 📂 Project Structure
 
 
 
@@ -222,19 +196,41 @@ robot-hand/
 
 │
 
-├── index.html
-
-├── api/
-
 ├── README.md
 
-└── README\_CN.md
+├── README\_CN.md
+
+├── index.html
+
+└── api/
 
 ```
 
 
 
-\## 👨‍💻 Author
+\---
+
+
+
+\# 6. 📸 Demonstration
+
+
+
+The prototype consists of a tendon-driven silicone hand actuated by five servo motors. Through the web interface, users can control each finger individually, execute predefined gestures, and interact with the robotic hand using voice commands.
+
+
+
+Project photos, videos and additional demonstrations will be added as development continues.
+
+
+
+
+
+\---
+
+
+
+\# 8. 👨‍💻 Author
 
 
 
@@ -243,6 +239,8 @@ Haihui Dong
 
 
 Temasek Polytechnic
+
+
 
 Diploma in Electronics
 
@@ -258,7 +256,7 @@ https://github.com/donghaihui060708
 
 
 
-\## 📌 Copyright
+\# 9. 📌 Copyright
 
 
 
