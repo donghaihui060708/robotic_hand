@@ -585,39 +585,49 @@ BEHAVIOR RULES:
 - If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
 
 CUSTOM MOTION RULE:
-- If the user asks for 手指操, finger exercise, rehabilitation exercise, hand dance, continuous motion, custom motion, warm up fingers, or finger training, output custom_sequence mode.
-- Generate a thumb-to-pinky progressive wave curl.
-- Curling direction must be thumb -> index -> middle -> ring -> pinky.
-- Opening direction must be the reverse: pinky -> ring -> middle -> index -> thumb.
-- Use 30 degree offset between neighboring fingers.
-- Do not make all five fingers move together.
-- Do not wait for one finger to fully curl before the next finger starts.
-- The motion must overlap like a wave.
+- If the user asks for finger exercise, 手指操, rehabilitation exercise, warm up fingers, continuous motion, custom motion, emotion expression, greeting, wave hello, celebrate, relax, nervous, thinking, animal imitation, dance, or music rhythm, output custom_sequence mode.
+- You must generate a continuous natural hand motion using custom angles.
+- Each step must use [thumb,index,middle,ring,pinky].
 - 0 means fully open. 180 means fully curled.
-- Use this exact style:
+- Angle range must stay between 0 and 180.
+- Delay should usually be 150 to 500 ms.
+- Hold important poses for 500 to 900 ms.
+- Avoid strange or unsafe poses.
+- Avoid sudden jumps larger than 60 degrees between nearby steps unless it is a clear expressive gesture.
+- Do not only use preset gestures.
 
+MOTION STYLE GUIDE:
+1. Finger exercise / 手指操:
+Use thumb-to-pinky wave curl, then reverse opening.
+Curl direction: thumb -> index -> middle -> ring -> pinky.
+Open direction: pinky -> ring -> middle -> index -> thumb.
+Use 30 degree overlap.
+
+2. Greeting / hello:
+Open palm, then small repeated open-close wave.
+
+3. Happy / celebrate:
+Open palm -> victory-like shape -> thumbs-up-like shape -> open palm.
+
+4. Relax / breathing:
+Slowly curl all fingers to 60-100 degrees, then slowly open.
+
+5. Nervous / thinking:
+Small index or finger tapping motion, not full fist.
+
+6. Animal / dance / music:
+Use smooth wave motions across fingers, like piano or snake wave.
+
+Output ONLY valid JSON.
+
+Single action:
+{"mode":"single","ans":"2"}
+
+Custom sequence:
 {"mode":"custom_sequence","actions":[
-{"angles":[0,0,0,0,0],"delay":250},
+{"angles":[0,0,0,0,0],"delay":300},
 {"angles":[30,0,0,0,0],"delay":200},
-{"angles":[60,30,0,0,0],"delay":200},
-{"angles":[90,60,30,0,0],"delay":200},
-{"angles":[120,90,60,30,0],"delay":200},
-{"angles":[150,120,90,60,30],"delay":200},
-{"angles":[180,150,120,90,60],"delay":200},
-{"angles":[180,180,150,120,90],"delay":200},
-{"angles":[180,180,180,150,120],"delay":200},
-{"angles":[180,180,180,180,150],"delay":200},
-{"angles":[180,180,180,180,180],"delay":700},
-{"angles":[180,180,180,180,150],"delay":200},
-{"angles":[180,180,180,150,120],"delay":200},
-{"angles":[180,180,150,120,90],"delay":200},
-{"angles":[180,150,120,90,60],"delay":200},
-{"angles":[150,120,90,60,30],"delay":200},
-{"angles":[120,90,60,30,0],"delay":200},
-{"angles":[90,60,30,0,0],"delay":200},
-{"angles":[60,30,0,0,0],"delay":200},
-{"angles":[30,0,0,0,0],"delay":200},
-{"angles":[0,0,0,0,0],"delay":700}
+{"angles":[60,30,0,0,0],"delay":200}
 ]}`;
     try{
         const response = await fetch("/api/chat", { 
@@ -652,7 +662,7 @@ CUSTOM MOTION RULE:
         		name: "AI Generated Motion",
         		actions: parsed.actions.map(item => ({
             			isCustomAngles: true,
-            			angles: item.angles,
+            			angles: item.angles.map(v => Math.max(0, Math.min(180, parseInt(v)))),
             			label: "AI Motion",
             			delayAfter: item.delay || 200
         		}))
