@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V9.9 - Standard JSON Protocol</title>
+<title>Embodied AI Soft Robotics Client V9.9 - Restored Control Sliders</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <style>
@@ -111,7 +111,7 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
             <div style="display: flex; flex-direction: column; justify-content: center; gap: 15px;">
                 <button id="startWebcamBtn" onclick="startCamera()" style="background: linear-gradient(145deg, #238636, #2ea043);">🟢 Open Video Capture Stream</button>
                 <button id="stopWebcamBtn" onclick="stopCamera()" style="background: linear-gradient(145deg, #b30000, #ff3b3b);">🛑 Close Video Capture Stream</button>
-                <div style="background:#161b22; padding:15px; border-radius:8px; border:1px solid #21262d; font-size:12px; line-height: 1.6;">
+                <div style="background:#161b22; padding:15px; border-radius:8px; border:1px solid #21262d; font-size:12px; line-height: 1.8;">
                     <span style="color:#58a6ff; font-weight:bold;">💡 Guide / 使用指南：</span><br>
                     1. Bind physical Type-C serial port or BLE connection.<br>
                     2. Click the green button to start the camera and allow permissions.<br>
@@ -256,9 +256,6 @@ let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
 let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {}, activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
 let lastActionTime = 0;
 
-let smoothedAngles = [0, 0, 0, 0, 0];
-const FRONT_SMOOTH_FACTOR = 0.25; // 网页端平滑系数：数值越小越慢越平滑
-
 let currentAngles = [0, 0, 0, 0, 0];
 let targetAngles = [0, 0, 0, 0, 0];
 let startAngles = [0, 0, 0, 0, 0];
@@ -359,29 +356,12 @@ function onHandVisionResults(results) {
             return Math.round(t * 180);
         };
         
-        let rawP0 = mapThumbDistance(thumbDistance, 0.09, 0.26); 
-        let rawP1 = mapAngle(angleIndex, 105, 170);
-        let rawP2 = mapAngle(angleMiddle, 105, 170);
-        let rawP3 = mapAngle(angleRing, 105, 170);
-        let rawP4 = mapAngle(anglePinky, 105, 170);
+        let p0 = mapThumbDistance(thumbDistance, 0.09, 0.26); 
+        let p1 = mapAngle(angleIndex, 105, 170);
+        let p2 = mapAngle(angleMiddle, 105, 170);
+        let p3 = mapAngle(angleRing, 105, 170);
+        let p4 = mapAngle(anglePinky, 105, 170);
 
-        smoothedAngles[0] += (rawP0 - smoothedAngles[0]) * FRONT_SMOOTH_FACTOR;
-        smoothedAngles[1] += (rawP1 - smoothedAngles[1]) * FRONT_SMOOTH_FACTOR;
-        smoothedAngles[2] += (rawP2 - smoothedAngles[2]) * FRONT_SMOOTH_FACTOR;
-        smoothedAngles[3] += (rawP3 - smoothedAngles[3]) * FRONT_SMOOTH_FACTOR;
-        smoothedAngles[4] += (rawP4 - smoothedAngles[4]) * FRONT_SMOOTH_FACTOR;
-
-        let p0 = Math.round(smoothedAngles[0]);
-        let p1 = Math.round(smoothedAngles[1]);
-        let p2 = Math.round(smoothedAngles[2]);
-        let p3 = Math.round(smoothedAngles[3]);
-        let p4 = Math.round(smoothedAngles[4]);
-
-        currentAngles = [p0, p1, p2, p3, p4];
-        for(let i=0; i<5; i++) {
-            document.getElementById(`slideM${i}`).value = currentAngles[i];
-            document.getElementById(`lblM${i}`).textContent = currentAngles[i] + "°";
-        }
         document.getElementById("hugeDisplay").textContent = "👁️";
         document.getElementById("poseTextDisplay").textContent = "Vision Tracking";
         
@@ -394,7 +374,7 @@ function onHandVisionResults(results) {
                 }
                 rehabMacroSequence.push({
                     isCustomAngles: true,
-                    angles: [...currentAngles],
+                    angles: [p0, p1, p2, p3, p4],
                     label: "Mocap Stream",
                     delayAfter: 25
                 });
@@ -402,9 +382,14 @@ function onHandVisionResults(results) {
                 document.getElementById("macroIndicator").textContent = `Streaming Mocap... (${rehabMacroSequence.length} frames recorded)`;
             }
         }
-        if (now - lastVisionSendTime > 85) {
-            sendAnglesToESP32(p0, p1, p2, p3, p4);
-            lastVisionSendTime = now;
+
+        // 核心修改：重新引入贝塞尔缓动函数的数据桥接。将解算出来的姿态设为 Target，并触发贝塞尔步进。
+        // 这将使页面上的 Motion Duration 滑块重新全面接管摄像头动捕模式下的速度控制！
+        startAngles = [...currentAngles];
+        targetAngles = [p0, p1, p2, p3, p4];
+        bezierStartTime = performance.now();
+        if (!bezierTimeoutId) {
+            bezierAnimationStep();
         }
     }
 }
@@ -675,8 +660,11 @@ function bezierAnimationStep() {
     }
     syncSlidersFromCurrentAngles();
     sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-    if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } 
-    else { bezierTimeoutId = null; }
+    if (t < 1) { 
+        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); 
+    } else { 
+        bezierTimeoutId = null; 
+    }
 }
 
 function triggerDirect(action) {
@@ -752,10 +740,8 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
         if (bleCharacteristic) {
             if (bleWriteBusy) return;
             bleWriteBusy = true; 
-            
             const encoder = new TextEncoder();
             await bleCharacteristic.writeValue(encoder.encode(payloadStr));
-            
             bleWriteBusy = false;
             document.getElementById("jsonPreview").textContent = "🔵 BLE Standard JSON -> " + payloadStr;
             return;
