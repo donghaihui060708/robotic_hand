@@ -96,7 +96,7 @@ robot-hand/
 
 ├── README.md
 
-├── README\_CN.md
+├── README_CN.md
 
 ├── index.html
 
