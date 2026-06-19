@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V9.0</title>
+<title>Embodied AI Soft Robotics Client V9.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <style>
@@ -269,8 +269,8 @@ function initMediaPipeHands() {
     });
     handsDetector.setOptions({
         maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.6,
+        modelComplexity: 0, 
+        minDetectionConfidence: 0.5, 
         minTrackingConfidence: 0.6
     });
     handsDetector.onResults(onHandVisionResults);
@@ -307,6 +307,14 @@ function stopCamera() {
     setStatus("Camera stream disconnected.");
 }
 
+function calculateDistance(pt1, pt2) {
+    return Math.sqrt(
+        Math.pow(pt1.x - pt2.x, 2) +
+        Math.pow(pt1.y - pt2.y, 2) +
+        Math.pow(pt1.z - pt2.z, 2)
+    );
+}
+
 function calculateJointAngle(pA, pB, pC) {
     let v1 = { x: pA.x - pB.x, y: pA.y - pB.y, z: pA.z - pB.z };
     let v2 = { x: pC.x - pB.x, y: pC.y - pB.y, z: pC.z - pB.z };
@@ -328,27 +336,35 @@ function onHandVisionResults(results) {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
         drawSkeleton(ctx, landmarks);
-        let angleThumb = calculateJointAngle(landmarks[2], landmarks[3], landmarks[4]);
         let angleIndex  = calculateJointAngle(landmarks[5], landmarks[6], landmarks[8]);
         let angleMiddle = calculateJointAngle(landmarks[9], landmarks[10], landmarks[12]);
         let angleRing   = calculateJointAngle(landmarks[13], landmarks[14], landmarks[16]);
         let anglePinky  = calculateJointAngle(landmarks[17], landmarks[18], landmarks[20]);
+        let thumbDistance = calculateDistance(landmarks[4], landmarks[9]);
         const mapAngle = (ang, minLimit=100, maxLimit=175) => {
             let t = (maxLimit - ang) / (maxLimit - minLimit); 
             t = Math.max(0, Math.min(1, t));
             return Math.round(t * 180);
         };
-        let p0 = mapAngle(angleThumb, 120, 170); 
-        let p1 = mapAngle(angleIndex, 100, 175);
-        let p2 = mapAngle(angleMiddle, 100, 175);
-        let p3 = mapAngle(angleRing, 100, 175);
-        let p4 = mapAngle(anglePinky, 100, 175);
+        const mapThumbDistance = (dist, minDist=0.08, maxDist=0.28) => {
+            let t = (maxDist - dist) / (maxDist - minDist); 
+            t = Math.max(0, Math.min(1, t));
+            return Math.round(t * 180);
+        };
+        let p0 = mapThumbDistance(thumbDistance, 0.09, 0.26); 
+        let p1 = mapAngle(angleIndex, 105, 170);
+        let p2 = mapAngle(angleMiddle, 105, 170);
+        let p3 = mapAngle(angleRing, 105, 170);
+        let p4 = mapAngle(anglePinky, 105, 170);
         currentAngles = [p0, p1, p2, p3, p4];
-        syncSlidersFromCurrentAngles();
+        for(let i=0; i<5; i++) {
+            document.getElementById(`slideM${i}`).value = currentAngles[i];
+            document.getElementById(`lblM${i}`).textContent = currentAngles[i] + "°";
+        }
         document.getElementById("hugeDisplay").textContent = "👁️";
         document.getElementById("poseTextDisplay").textContent = "Vision Tracking";
         let now = Date.now();
-        if (now - lastVisionSendTime > 35) {
+        if (now - lastVisionSendTime > 20) {
             sendAnglesToESP32(p0, p1, p2, p3, p4);
             lastVisionSendTime = now;
         }
@@ -638,7 +654,51 @@ function emergencyStop() { stopCamera(); stopAnyRunningSequence(); clearAllTimer
 async function askLLM(userText){    
     const rpsOptions = ["0", "2", "5"];
     const rpsAns = rpsOptions[Math.floor(Math.random() * rpsOptions.length)];
-    const systemPrompt = `You are the brain of an autonomous embodied robotic hand...`;
+    const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
+Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
+
+CRITICAL PREDEFINED ACTIONS MAP:
+"0": Fist (Represents anger, power, closed hand, Rock in rock-paper-scissors)
+"1": Index finger (Represents pointing, number 1)
+"2": Victory gesture / Scissors (Represents peace, happiness, "Cheese" for taking photos, "比个耶", Scissors in rock-paper-scissors)
+"3": Number 3 gesture
+"4": Number 4 gesture
+"5": Open palm (Represents waving hello/goodbye, relaxation, high-five, Paper in rock-paper-scissors)
+"6": Call-Me sign
+"7": Rock sign
+"8": Precision OK sign
+"9": Thumbs Up sign (Represents praise, excitement, agreement, saying "good/happy/perfect")
+
+CRITICAL MATH RULE:
+- If the user asks a mathematical calculation question, solve it first.
+- If the result is between 0 and 6, return:
+{"mode":"single","ans":"4"}
+- If the result is greater than 6, return:
+{"mode":"show_result","result":"15"}
+- Never map math results greater than 6 to gesture codes 7, 8, or 9.
+
+BEHAVIOR RULES:
+- If the user wants to play rock-paper-scissors, you MUST output the forced RPS answer provided in the user message.
+- If the user expresses joy or praise, select "9" or "2".
+- If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
+
+MODE SELECTION RULE:
+- Use single mode when the user asks for one clear static gesture, number, emotion, or simple command.
+- Use custom_sequence mode when the user asks for movement over time, repeated motion, exercise, dancing, waving, relaxing, thinking, emotion performance, animal imitation, or any command that sounds like an action process.
+
+CUSTOM MOTION RULE:
+- If the user asks for finger exercise, 手指操, rehabilitation exercise, warm up fingers, continuous motion, custom motion, emotion expression, greeting, wave hello, celebrate, relax, nervous, thinking, animal imitation, dance, or music rhythm, output custom_sequence mode.
+- You must generate a continuous natural hand motion using custom angles.
+- Each step must use [thumb,index,middle,ring,pinky].
+- 0 means fully open. 180 means fully curled.
+- Angle range must stay between 0 and 180.
+- Delay should usually be 150 to 500 ms.
+- Hold important poses for 500 to 900 ms.
+- Avoid strange or unsafe poses.
+- Avoid sudden jumps larger than 60 degrees between nearby steps unless it is a clear expressive gesture.
+- Do not only use preset gestures.
+
+Output ONLY valid JSON.`;
     try{
         const response = await fetch("/api/chat", { 
             method:"POST", 
@@ -686,7 +746,7 @@ async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
         }
         if (bleCharacteristic) {
             const now = Date.now();
-            if (now - bleLastSendTime < 35 || bleWriteBusy) return;
+            if (now - bleLastSendTime < 20 || bleWriteBusy) return;
             bleWriteBusy = true; bleLastSendTime = now;
             const encoder = new TextEncoder();
             await bleCharacteristic.writeValue(encoder.encode(payloadStr));
