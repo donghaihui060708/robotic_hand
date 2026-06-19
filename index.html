@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V8.5</title>
+<title>Embodied AI Soft Robotics Client V9.0</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
 body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding-bottom: 40px; }
@@ -11,18 +13,17 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .input-group{ flex:1; max-width: 400px; }
 input{ width:100%; background:#0d1117; border:1px solid #30363d; color:white; padding:12px 15px; border-radius:8px; outline:none; font-size: 13px; }
 input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
-#connectPortBtn,
-#connectBLEBtn,
-#disconnectPortBtn,
-#disconnectBLEBtn { background: linear-gradient(145deg,#1f6feb,#388bfd); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-#connectPortBtn:hover,
-#connectBLEBtn:hover,
-#disconnectPortBtn:hover,
-#disconnectBLEBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,139,253,0.4); }
+#connectPortBtn, #connectBLEBtn, #disconnectPortBtn, #disconnectBLEBtn, #startWebcamBtn, #stopWebcamBtn { background: linear-gradient(145deg,#1f6feb,#388bfd); color: white; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+#connectPortBtn:hover, #connectBLEBtn:hover, #disconnectPortBtn:hover, #disconnectBLEBtn:hover, #startWebcamBtn:hover, #stopWebcamBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,139,253,0.4); }
 .main-container { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; padding: 0 20px; }
 .panel { background: #111827; border: 1px solid #1f2937; border-radius: 15px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
 .panel-title { font-size: 13px; color: #388bfd; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
 .panel-title span { font-size: 11px; color: #8b949e; text-transform: none; font-weight: normal; margin-left: 5px; }
+.vision-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+@media(max-width: 768px) { .vision-grid { grid-template-columns: 1fr; } }
+.video-wrapper { position: relative; background: #0d1117; border: 1px solid #21262d; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 240px; }
+#webcamVideo { transform: scaleX(-1); display: none; } 
+#outputCanvas { transform: scaleX(-1); width: 100%; height: auto; max-width: 480px; background: #000; border-radius: 8px; }
 .control-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; margin-bottom: 20px; }
 .slider-group { display: flex; flex-direction: column; gap: 8px; }
 .slider-group label { font-size: 12px; font-weight: bold; color: #8b949e; display: flex; justify-content: space-between; }
@@ -97,9 +98,29 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
     <button id="disconnectPortBtn" onclick="disconnectSerial()">❌ Disconnect Type-C</button>
     <button id="connectBLEBtn" onclick="initBLE()">🔵 Connect BLE</button>
     <button id="disconnectBLEBtn" onclick="disconnectBLE()">❌ Disconnect BLE</button>
-    </div>
+</div>
 
 <div class="main-container">
+    <div class="panel">
+        <div class="panel-title">📷 Real-time Computer Vision Motion Capture <span>/ 计算机视觉人手实时动捕追踪舱</span></div>
+        <div class="vision-grid">
+            <div class="video-wrapper">
+                <video id="webcamVideo" width="480" height="360" autoplay playsinline></video>
+                <canvas id="outputCanvas" width="480" height="360"></canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center; gap: 15px;">
+                <button id="startWebcamBtn" onclick="startCamera()" style="background: linear-gradient(145deg, #238636, #2ea043);">🟢 Open Video Capture Stream</button>
+                <button id="stopWebcamBtn" onclick="stopCamera()" style="background: linear-gradient(145deg, #b30000, #ff3b3b);">🛑 Close Video Capture Stream</button>
+                <div style="background:#161b22; padding:12px; border-radius:8px; border:1px solid #21262d; font-size:12px; line-height: 1.6;">
+                    <span style="color:#58a6ff; font-weight:bold;">💡 动捕舱使用指南：</span><br>
+                    1. 绑定 Type-C 数据线或 BLE 蓝牙通路。<br>
+                    2. 点击绿色按钮启动摄像头，允许浏览器调用摄像头权限。<br>
+                    3. 将手掌置于摄像头视野中央。模型将高频提取 21 个骨骼点，解算五轴弯曲角度（0° 伸直 → 180° 握拳）驱动硬件。
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="panel">
         <div class="panel-title">🎚️ Real-time Bézier Trajectory Tuning <span>/ 贝塞尔曲线运动控制动态调节</span></div>
         <div class="control-sliders">
@@ -156,12 +177,10 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 
     <div class="panel">
         <div class="panel-title">🎤 Embodied Agent Intelligence Cabin <span>/ 具身智能自然语言交互舱</span></div>
-        
         <div class="text-chat-box">
             <input id="textInput" type="text" placeholder="Type command here and press Enter... / 在这里输入文字指令并回车..." onkeydown="if(event.key==='Enter') sendTextMessage()">
             <button onclick="sendTextMessage()">Send / 发送</button>
         </div>
-
         <div class="lang-selector-box">
             <span style="font-size:12px; color:#8b949e; margin-right:5px;">🗣️ STT Language / 说话语言:</span>
             <label class="lang-radio active-lang" id="lbl-zh">
@@ -226,14 +245,10 @@ let bleCharacteristic = null;
 let bleWriteBusy = false;
 let bleLastSendTime = 0;
 
-const BLE_SERVICE_UUID =
-"12345678-1234-1234-1234-1234567890ab";
-
-const BLE_CHARACTERISTIC_UUID =
-"abcd1234-5678-90ab-cdef-1234567890ab";
+const BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
+const BLE_CHARACTERISTIC_UUID = "abcd1234-5678-90ab-cdef-1234567890ab";
 
 let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
-
 let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {}, activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
 let lastActionTime = 0;
 
@@ -242,6 +257,132 @@ let targetAngles = [0, 0, 0, 0, 0];
 let startAngles = [0, 0, 0, 0, 0];
 let bezierStartTime = 0;
 let bezierTimeoutId = null;
+
+let handsDetector = null;
+let cameraActiveInstance = null;
+let isVideoTracking = false;
+let lastVisionSendTime = 0; 
+
+function initMediaPipeHands() {
+    handsDetector = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+    handsDetector.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.6
+    });
+    handsDetector.onResults(onHandVisionResults);
+}
+
+function startCamera() {
+    if (!handsDetector) initMediaPipeHands();
+    const videoElement = document.getElementById('webcamVideo');
+    stopAnyRunningSequence();
+    clearAllTimers();
+    isVideoTracking = true;
+    cameraActiveInstance = new Camera(videoElement, {
+        onFrame: async () => {
+            if (isVideoTracking) {
+                await handsDetector.send({ image: videoElement });
+            }
+        },
+        width: 480,
+        height: 360
+    });
+    cameraActiveInstance.start()
+        .then(() => setStatus("Camera vision active."))
+        .catch(err => setStatus("Camera failed: " + err.message));
+}
+
+function stopCamera() {
+    isVideoTracking = false;
+    if (cameraActiveInstance) {
+        cameraActiveInstance.stop();
+    }
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setStatus("Camera stream disconnected.");
+}
+
+function calculateJointAngle(pA, pB, pC) {
+    let v1 = { x: pA.x - pB.x, y: pA.y - pB.y, z: pA.z - pB.z };
+    let v2 = { x: pC.x - pB.x, y: pC.y - pB.y, z: pC.z - pB.z };
+    let dotProduct = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+    let normV1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
+    let normV2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
+    let cosAngle = dotProduct / (normV1 * normV2);
+    let angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle))); 
+    return angleRad * (180 / Math.PI);
+}
+
+function onHandVisionResults(results) {
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (results.image) {
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+    }
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        drawSkeleton(ctx, landmarks);
+        let angleThumb = calculateJointAngle(landmarks[2], landmarks[3], landmarks[4]);
+        let angleIndex  = calculateJointAngle(landmarks[5], landmarks[6], landmarks[8]);
+        let angleMiddle = calculateJointAngle(landmarks[9], landmarks[10], landmarks[12]);
+        let angleRing   = calculateJointAngle(landmarks[13], landmarks[14], landmarks[16]);
+        let anglePinky  = calculateJointAngle(landmarks[17], landmarks[18], landmarks[20]);
+        const mapAngle = (ang, minLimit=100, maxLimit=175) => {
+            let t = (maxLimit - ang) / (maxLimit - minLimit); 
+            t = Math.max(0, Math.min(1, t));
+            return Math.round(t * 180);
+        };
+        let p0 = mapAngle(angleThumb, 120, 170); 
+        let p1 = mapAngle(angleIndex, 100, 175);
+        let p2 = mapAngle(angleMiddle, 100, 175);
+        let p3 = mapAngle(angleRing, 100, 175);
+        let p4 = mapAngle(anglePinky, 100, 175);
+        currentAngles = [p0, p1, p2, p3, p4];
+        syncSlidersFromCurrentAngles();
+        document.getElementById("hugeDisplay").textContent = "👁️";
+        document.getElementById("poseTextDisplay").textContent = "Vision Tracking";
+        let now = Date.now();
+        if (now - lastVisionSendTime > 35) {
+            sendAnglesToESP32(p0, p1, p2, p3, p4);
+            lastVisionSendTime = now;
+        }
+    }
+}
+
+function drawSkeleton(ctx, landmarks) {
+    ctx.fillStyle = "#39ff14";
+    ctx.strokeStyle = "#388bfd";
+    ctx.lineWidth = 3;
+    const fingerConnections = [
+        [0,1,2,3,4],       
+        [0,5,6,7,8],       
+        [9,10,11,12],      
+        [13,14,15,16],     
+        [0,17,18,19,20],   
+        [5,9,13,17]        
+    ];
+    fingerConnections.forEach(chain => {
+        ctx.beginPath();
+        for (let i = 0; i < chain.length - 1; i++) {
+            let pt1 = landmarks[chain[i]];
+            let pt2 = landmarks[chain[i+1]];
+            ctx.moveTo(pt1.x * 480, pt1.y * 360);
+            ctx.lineTo(pt2.x * 480, pt2.y * 360);
+        }
+        ctx.stroke();
+    });
+    landmarks.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(pt.x * 480, pt.y * 360, 4, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+}
 
 function updateSliderLabels() {
     document.getElementById("valDuration").textContent = document.getElementById("slideDuration").value;
@@ -256,18 +397,16 @@ function syncSlidersFromCurrentAngles() {
 }
 
 function manualMotorMove(idx) {
+    if(isVideoTracking) stopCamera();
     stopAnyRunningSequence();
     clearAllTimers();
     let val = parseInt(document.getElementById(`slideM${idx}`).value);
     document.getElementById(`lblM${idx}`).textContent = val + "°";
-    
     document.getElementById("hugeDisplay").textContent = "⚙️";
     document.getElementById("poseTextDisplay").textContent = "Manual Motor Tuning";
-    
     startAngles = [...currentAngles];
     targetAngles = [...currentAngles];
     targetAngles[idx] = val;
-    
     if(isMacroRecording) {
         let now = Date.now();
         let diff = now - lastActionTime;
@@ -276,13 +415,11 @@ function manualMotorMove(idx) {
         lastActionTime = now;
         document.getElementById("macroIndicator").textContent = `Captured Slide Frame! (${rehabMacroSequence.length} actions recorded)`;
     }
-    
     bezierStartTime = performance.now();
     if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
     bezierAnimationStep();
 }
 
-// 修改语言辅助配置
 function switchSTTLanguage(lang) {
     currentSTTLanguage = lang;
     document.getElementById("lbl-zh").classList.toggle("active-lang", lang === "zh-CN");
@@ -344,7 +481,6 @@ function renderSequenceLibraryUI() {
             <button class="pause-seq-btn ${isLibraryPaused ? 'btn-is-paused' : ''}" onclick="handleControlClick('${id}', 'pause')">${isLibraryPaused ? '▶️ Resume' : '⏸️ Pause'}</button>
             <button class="run-seq-btn active-stop" onclick="handleControlClick('${id}', 'stop')">🛑 Stop</button>
         ` : `<button class="run-seq-btn" onclick="handleControlClick('${id}', 'run')">🔮 Run</button>`;
-
         htmlPool += `<div class="library-card ${isRunning ? 'card-running' : ''}">
             <div class="library-info"><div class="library-name">📂 ${seqData.name}</div><div class="library-meta">Flow: ${flowChain}</div></div>
             <div class="card-actions">${buttonsHtml}<button class="del-seq-btn" onclick="deleteSequence('${id}')">🗑️ Del</button></div>
@@ -356,7 +492,7 @@ function renderSequenceLibraryUI() {
 function handleControlClick(id, actionType) {
     if (actionType === 'stop') { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return; }
     if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); } return; }
-    if (actionType === 'run') { stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
+    if (actionType === 'run') { if(isVideoTracking) stopCamera(); stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
 }
 
 function executeSequenceStep(id, stepIndex) {
@@ -379,128 +515,55 @@ function deleteSequence(id) { if(activeRunningId === id) stopAnyRunningSequence(
 
 async function initSerialPort() {
     try {
-        if (!("serial" in navigator)) {
-            alert("Web Serial not supported on this browser.");
-            return;
-        }
-
+        if (!("serial" in navigator)) { alert("Web Serial not supported."); return; }
         serialPort = await navigator.serial.requestPort();
         await serialPort.open({ baudRate: 115200 });
-
         const textEncoder = new TextEncoderStream();
         serialWritableClosed = textEncoder.readable.pipeTo(serialPort.writable);
         serialWriter = textEncoder.writable.getWriter();
-
         document.getElementById("connectPortBtn").style.background = "#238636";
-        document.getElementById("connectPortBtn").textContent =
-            "✅ Type-C Connected";
-
+        document.getElementById("connectPortBtn").textContent = "✅ Type-C Connected";
         setStatus("Serial Connected.");
-    } catch (err) {
-        setStatus("Failed: " + err.message);
-    }
+    } catch (err) { setStatus("Failed: " + err.message); }
 }
+
 async function initBLE() {
-
     try {
-
-        bleDevice =
-        await navigator.bluetooth.requestDevice({
-            filters: [
-                {
-                    name: "RobotHand_BLE"
-                }
-            ],
-            optionalServices: [
-                BLE_SERVICE_UUID
-            ]
+        bleDevice = await navigator.bluetooth.requestDevice({
+            filters: [{ name: "RobotHand_BLE" }],
+            optionalServices: [BLE_SERVICE_UUID]
         });
-
-        bleServer =
-        await bleDevice.gatt.connect();
-
-        const service =
-        await bleServer.getPrimaryService(
-            BLE_SERVICE_UUID
-        );
-
-        bleCharacteristic =
-        await service.getCharacteristic(
-            BLE_CHARACTERISTIC_UUID
-        );
-
-        const bleBtn =
-	document.getElementById("connectBLEBtn");
-
-	bleBtn.textContent =
-	"✅ BLE Connected";
-
-	bleBtn.style.background =
-	"linear-gradient(145deg,#238636,#2ea043)";
-
-	setStatus(
-    	"BLE connected successfully."
-	);
-
-    }
-    catch(err){
-
-        setStatus(
-            "BLE connect failed: "
-            + err.message
-        );
-
-    }
+        bleServer = await bleDevice.gatt.connect();
+        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+        bleCharacteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+        const bleBtn = document.getElementById("connectBLEBtn");
+        bleBtn.textContent = "✅ BLE Connected";
+        bleBtn.style.background = "linear-gradient(145deg,#238636,#2ea043)";
+        setStatus("BLE connected successfully.");
+    } catch(err){ setStatus("BLE connect failed: " + err.message); }
 }
+
 async function disconnectBLE() {
     try {
-        if (bleDevice && bleDevice.gatt.connected) {
-            bleDevice.gatt.disconnect();
-        }
-
-        bleDevice = null;
-        bleServer = null;
-        bleCharacteristic = null;
-
-	const bleBtn =
-	document.getElementById("connectBLEBtn");
-
-	bleBtn.textContent =
-	"🔵 Connect BLE";
-
-	bleBtn.style.background =
-	"linear-gradient(145deg,#1f6feb,#388bfd)";
-
+        if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+        bleDevice = null; bleServer = null; bleCharacteristic = null;
+        const bleBtn = document.getElementById("connectBLEBtn");
+        bleBtn.textContent = "🔵 Connect BLE";
+        bleBtn.style.background = "linear-gradient(145deg,#1f6feb,#388bfd)";
         setStatus("BLE disconnected.");
-    } catch (err) {
-        setStatus("BLE disconnect failed: " + err.message);
-    }
+    } catch (err) { setStatus("BLE disconnect failed: " + err.message); }
 }
 
 async function disconnectSerial() {
     try {
-        if (serialWriter) {
-            await serialWriter.close();
-            await serialWritableClosed;
-            serialWriter = null;
-            serialWritableClosed = null;
-        }
-
-        if (serialPort) {
-            await serialPort.close();
-            serialPort = null;
-        }
-
-        document.getElementById("connectPortBtn").textContent =
-            "🔌 Connect Type-C";
-	document.getElementById("connectPortBtn").style.background =
-    		"linear-gradient(145deg,#1f6feb,#388bfd)";
-
+        if (serialWriter) { await serialWriter.close(); await serialWritableClosed; serialWriter = null; serialWritableClosed = null; }
+        if (serialPort) { await serialPort.close(); serialPort = null; }
+        document.getElementById("connectPortBtn").textContent = "🔌 Connect Type-C";
+        document.getElementById("connectPortBtn").style.background = "linear-gradient(145deg,#1f6feb,#388bfd)";
         setStatus("Type-C disconnected.");
-    } catch (err) {
-        setStatus("Type-C disconnect failed: " + err.message);
-    }
+    } catch (err) { setStatus("Type-C disconnect failed: " + err.message); }
 }
+
 function setStatus(msg){ document.getElementById("status").textContent = msg; }
 
 function executeHardwarePipeline(actionKey) {
@@ -508,11 +571,9 @@ function executeHardwarePipeline(actionKey) {
     if (POSES_DICTIONARY[keyStr]) {
         document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
         document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
-        
         startAngles = [...currentAngles];
         targetAngles = [...POSES_DICTIONARY[keyStr]];
         bezierStartTime = performance.now();
-        
         if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
         bezierAnimationStep();
     }
@@ -522,7 +583,6 @@ function bezierAnimationStep() {
     let now = performance.now();
     let totalDuration = parseInt(document.getElementById("slideDuration").value);
     let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
-
     if (bleCharacteristic && !serialWriter) {
         sendBLETargetAngles(targetAngles, totalDuration);
         currentAngles = [...targetAngles];
@@ -530,25 +590,20 @@ function bezierAnimationStep() {
         bezierTimeoutId = null;
         return;
     }
-
     let elapsed = now - bezierStartTime;
     let t = Math.min(elapsed / totalDuration, 1);
     let p = t * t * (3 - 2 * t);
-
     for (let i = 0; i < 5; i++) {
         currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p);
     }
-
     syncSlidersFromCurrentAngles();
     sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-
-    if (t < 1) {
-        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay);
-    } else {
-        bezierTimeoutId = null;
-    }
+    if (t < 1) { bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); } 
+    else { bezierTimeoutId = null; }
 }
+
 function triggerDirect(action) {
+    if(isVideoTracking) stopCamera();
     let keyStr = String(action).trim();
     if(isMacroRecording) { 
         let now = Date.now(); let diff = now - lastActionTime;
@@ -559,8 +614,9 @@ function triggerDirect(action) {
 }
 
 function sendTextMessage() {
+    if(isVideoTracking) stopCamera();
     stopAnyRunningSequence(); let txt = document.getElementById("textInput").value.trim(); if(!txt) return;
-    clearAllTimers(); document.getElementById("speechText").textContent = `"${txt}"`; setStatus("AI thinking... / 智能解算中...");
+    clearAllTimers(); document.getElementById("speechText").textContent = `"${txt}"`; setStatus("AI thinking...");
     askLLM(txt); document.getElementById("textInput").value = "";
 }
 
@@ -573,275 +629,73 @@ function initRecognition(){
         for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " "; else interimTranscript += event.results[i][0].transcript; }
         document.getElementById("speechText").textContent = `"${finalTranscript + interimTranscript}"`;
     };
-    recognition.onend = () => { document.getElementById("recordBtn").classList.remove("recording"); if(!isRecording && finalTranscript.trim() !== "") { setStatus("AI thinking... / 智能解算中..."); askLLM(finalTranscript.trim()); } };
+    recognition.onend = () => { document.getElementById("recordBtn").classList.remove("recording"); if(!isRecording && finalTranscript.trim() !== "") { setStatus("AI thinking..."); askLLM(finalTranscript.trim()); } };
 }
 
-document.getElementById("recordBtn").addEventListener("click", () => { stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
-function emergencyStop() { stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
+document.getElementById("recordBtn").addEventListener("click", () => { if(isVideoTracking) stopCamera(); stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
+function emergencyStop() { stopCamera(); stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
 
 async function askLLM(userText){    
     const rpsOptions = ["0", "2", "5"];
     const rpsAns = rpsOptions[Math.floor(Math.random() * rpsOptions.length)];
-
-    const systemPrompt = `You are the brain of an autonomous embodied robotic hand.
-Your job is to analyze the user's intent and choose exactly ONE predefined action code from "0" to "9" that best fits the scenario or emotion.
-
-CRITICAL PREDEFINED ACTIONS MAP:
-"0": Fist (Represents anger, power, closed hand, Rock in rock-paper-scissors)
-"1": Index finger (Represents pointing, number 1)
-"2": Victory gesture / Scissors (Represents peace, happiness, "Cheese" for taking photos, "比个耶", Scissors in rock-paper-scissors)
-"3": Number 3 gesture
-"4": Number 4 gesture
-"5": Open palm (Represents waving hello/goodbye, relaxation, high-five, Paper in rock-paper-scissors)
-"6": Call-Me sign
-"7": Rock sign
-"8": Precision OK sign
-"9": Thumbs Up sign (Represents praise, excitement, agreement, saying "good/happy/perfect")
-
-CRITICAL MATH RULE:
-- If the user asks a mathematical calculation question, solve it first.
-- If the result is between 0 and 6, return:
-
-{"mode":"single","ans":"4"}
-
-(example)
-
-- If the result is greater than 6, return:
-
-{"mode":"show_result","result":"15"}
-
-- Never map math results greater than 6 to gesture codes 7, 8, or 9.
-
-BEHAVIOR RULES:
-- If the user wants to play rock-paper-scissors, you MUST output the forced RPS answer provided in the user message.
-- If the user expresses joy or praise, select "9" or "2".
-- If the user says "比个耶" or "take a photo / 拍照", you MUST output "2".
-
-MODE SELECTION RULE:
-- Use single mode when the user asks for one clear static gesture, number, emotion, or simple command.
-Examples:
-"比个耶" -> single
-"点赞" -> single
-"握拳" -> single
-"张开" -> single
-"show number 2" -> single
-"1+1" -> single
-
-- Use custom_sequence mode when the user asks for movement over time, repeated motion, exercise, dancing, waving, relaxing, thinking, emotion performance, animal imitation, or any command that sounds like an action process.
-Examples:
-"做一个手指操" -> custom_sequence
-"wave hello" -> custom_sequence
-"do a happy motion" -> custom_sequence
-"relax slowly" -> custom_sequence
-"dance" -> custom_sequence
-"像蛇一样动" -> custom_sequence
-"手指依次弯曲再展开" -> custom_sequence
-
-CUSTOM MOTION RULE:
-- If the user asks for finger exercise, 手指操, rehabilitation exercise, warm up fingers, continuous motion, custom motion, emotion expression, greeting, wave hello, celebrate, relax, nervous, thinking, animal imitation, dance, or music rhythm, output custom_sequence mode.
-- You must generate a continuous natural hand motion using custom angles.
-- Each step must use [thumb,index,middle,ring,pinky].
-- 0 means fully open. 180 means fully curled.
-- Angle range must stay between 0 and 180.
-- Delay should usually be 150 to 500 ms.
-- Hold important poses for 500 to 900 ms.
-- Avoid strange or unsafe poses.
-- Avoid sudden jumps larger than 60 degrees between nearby steps unless it is a clear expressive gesture.
-- Do not only use preset gestures.
-
-MOTION STYLE GUIDE:
-1. Finger exercise / 手指操:
-Use thumb-to-pinky wave curl, then reverse opening.
-Curl direction: thumb -> index -> middle -> ring -> pinky.
-Open direction: pinky -> ring -> middle -> index -> thumb.
-Use 30 degree overlap.
-
-2. Greeting / hello:
-Open palm, then small repeated open-close wave.
-
-3. Happy / celebrate:
-Open palm -> victory-like shape -> thumbs-up-like shape -> open palm.
-
-4. Relax / breathing:
-Slowly curl all fingers to 60-100 degrees, then slowly open.
-
-5. Nervous / thinking:
-Small index or finger tapping motion, not full fist.
-
-6. Animal / dance / music:
-Use smooth wave motions across fingers, like piano or snake wave.
-
-Output ONLY valid JSON.
-
-Single action:
-{"mode":"single","ans":"2"}
-
-Math result:
-{"mode":"show_result","result":"15"}
-
-Custom sequence:
-{"mode":"custom_sequence","actions":[
-{"angles":[0,0,0,0,0],"delay":300},
-{"angles":[30,0,0,0,0],"delay":200},
-{"angles":[60,30,0,0,0],"delay":200}
-]}`;
+    const systemPrompt = `You are the brain of an autonomous embodied robotic hand...`;
     try{
         const response = await fetch("/api/chat", { 
             method:"POST", 
             headers:{ "Content-Type":"application/json" }, 
             body:JSON.stringify({ 
-                model:"deepseek-chat", 
-                temperature:0.7, 
-                messages:[
-    		{ role:"system", content:systemPrompt },
-   		{ 
-        		role:"user", 
-        		content:`User command: ${userText}
-
-		Forced RPS answer if this is rock-paper-scissors:
-		{"ans":"${rpsAns}"}`
-  	  	      }
-		]
+                model:"deepseek-chat", temperature:0.7, 
+                messages:[{ role:"system", content:systemPrompt },{ role:"user", content:`User command: ${userText}\nForced RPS answer: {"ans":"${rpsAns}"}` }]
             }) 
         });
         const data = await response.json(); let aiResponse = data.choices?.[0]?.message?.content?.trim().replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(aiResponse);
-
-	if(parsed.mode === "show_result"){
-
-    		document.getElementById("hugeDisplay").textContent =
-        		parsed.result;
-
-    		document.getElementById("poseTextDisplay").textContent =
-        		"Math Result";
-
-    		setStatus("Calculation complete.");
-
-    		return;
-		}
-
-	if(parsed.mode === "custom_sequence" && Array.isArray(parsed.actions)) {
-
-    		stopAnyRunningSequence();
-    		clearAllTimers();
-
-    		let seqId = "ai_custom_" + Date.now();
-
-    		globalSequenceLibrary[seqId] = {
-        		name: "AI Generated Motion",
-        		actions: parsed.actions.map(item => ({
-            			isCustomAngles: true,
-            			angles: item.angles.map(v => Math.max(0, Math.min(180, parseInt(v)))),
-            			label: "AI Motion",
-            			delayAfter: item.delay || 200
-        		}))
-    		};
-
-    		activeRunningId = seqId;
-   		isLibraryPaused = false;
-    		currentStepIndexMap[seqId] = 0;
-
-    		renderSequenceLibraryUI();
-    		executeSequenceStep(seqId, 0);
-
-    		setStatus("AI custom motion running.");
-    		return;
-	}
-
-	if(parsed.hasOwnProperty('ans')) { 
+        if(parsed.mode === "show_result"){ document.getElementById("hugeDisplay").textContent = parsed.result; document.getElementById("poseTextDisplay").textContent = "Math Result"; setStatus("Calculation complete."); return; }
+        if(parsed.mode === "custom_sequence" && Array.isArray(parsed.actions)) {
+            stopAnyRunningSequence(); clearAllTimers(); let seqId = "ai_custom_" + Date.now();
+            globalSequenceLibrary[seqId] = { name: "AI Generated Motion", actions: parsed.actions.map(item => ({ isCustomAngles: true, angles: item.angles.map(v => Math.max(0, Math.min(180, parseInt(v)))), label: "AI Motion", delayAfter: item.delay || 200 })) };
+            activeRunningId = seqId; isLibraryPaused = false; currentStepIndexMap[seqId] = 0; renderSequenceLibraryUI(); executeSequenceStep(seqId, 0); setStatus("AI custom motion running."); return;
+        }
+        if(parsed.hasOwnProperty('ans')) { 
             let finalAns = String(parsed.ans).trim();
-            if(isMacroRecording) {
-                let now = Date.now(); let diff = now - lastActionTime;
-                if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 }); lastActionTime = now;
-            }
-            executeHardwarePipeline(finalAns); 
-            setStatus("AI intent synchronized successfully.");
-            startAutoResetCountdown(); 
+            if(isMacroRecording) { let now = Date.now(); let diff = now - lastActionTime; if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; } rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 }); lastActionTime = now; }
+            executeHardwarePipeline(finalAns); setStatus("AI intent synchronized."); startAutoResetCountdown(); 
         }
     }catch(err){ setStatus("AI Engine analysis failed."); }
 }
 
 async function sendBLETargetAngles(angles, duration) {
     if (!bleCharacteristic) return;
-
     try {
-        if (bleWriteBusy) return;
-
-        bleWriteBusy = true;
-
-        const payloadStr = JSON.stringify({
-            mode: "target",
-            p0: angles[0],
-            p1: angles[1],
-            p2: angles[2],
-            p3: angles[3],
-            p4: angles[4],
-            duration: duration
-        });
-
+        if (bleWriteBusy) return; bleWriteBusy = true;
+        const payloadStr = JSON.stringify({ mode: "target", p0: angles[0], p1: angles[1], p2: angles[2], p3: angles[3], p4: angles[4], duration: duration });
         const encoder = new TextEncoder();
-        await bleCharacteristic.writeValue(
-            encoder.encode(payloadStr)
-        );
-
+        await bleCharacteristic.writeValue(encoder.encode(payloadStr));
         bleWriteBusy = false;
-
-        document.getElementById("jsonPreview").textContent =
-            "🔵 BLE Target -> " + payloadStr;
-
-    } catch (err) {
-        bleWriteBusy = false;
-        setStatus("BLE target send failed: " + err.message);
-    }
+        document.getElementById("jsonPreview").textContent = "🔵 BLE Target -> " + payloadStr;
+    } catch (err) { bleWriteBusy = false; setStatus("BLE target send failed: " + err.message); }
 }
 
 async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
-
     const payloadStr = JSON.stringify({ p0, p1, p2, p3, p4 });
-
     try {
-
         if (serialWriter) {
             await serialWriter.write(payloadStr + "\n");
-
-            document.getElementById("jsonPreview").textContent =
-            "🚀 Serial -> " + payloadStr;
-
+            document.getElementById("jsonPreview").textContent = "🚀 Serial -> " + payloadStr;
             return;
         }
-
         if (bleCharacteristic) {
             const now = Date.now();
-
-            if (now - bleLastSendTime < 50) {
-                return;
-            }
-
-            if (bleWriteBusy) {
-                return;
-            }
-
-            bleWriteBusy = true;
-            bleLastSendTime = now;
-
+            if (now - bleLastSendTime < 35 || bleWriteBusy) return;
+            bleWriteBusy = true; bleLastSendTime = now;
             const encoder = new TextEncoder();
             await bleCharacteristic.writeValue(encoder.encode(payloadStr));
-
             bleWriteBusy = false;
-
-            document.getElementById("jsonPreview").textContent =
-            "🔵 BLE -> " + payloadStr;
-
+            document.getElementById("jsonPreview").textContent = "🔵 BLE -> " + payloadStr;
             return;
         }
-
         setStatus("Please connect Type-C or BLE.");
-
-    } catch (err) {
-        bleWriteBusy = false;
-        setStatus("Send failed: " + err.message);
-    }
+    } catch (err) { bleWriteBusy = false; setStatus("Send failed: " + err.message); }
 }
 window.onload = () => { renderSequenceLibraryUI(); syncSlidersFromCurrentAngles(); };
 </script>
