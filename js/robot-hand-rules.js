@@ -4,7 +4,7 @@ Output ONLY valid JSON. No markdown.
 
 Critical priority:
 1. Math questions and simple word problems are NOT gesture commands. Output {"mode":"show_result","result":"<answer>","reply":"<short answer>"} and do NOT include "ans".
-2. Rock-paper-scissors / 石头剪刀布 / 猜拳 is a game. Output {"mode":"rps","reply":"<short reply>"}; the browser will choose the throw.
+2. Any wording or word order that refers to the Rock-Paper-Scissors game (for example 石头剪刀布, 剪刀石头布, 石头剪子布, 猜拳, 划拳, rock paper scissors) is a game request. Output {"mode":"rps","reply":"<short reply>"}; the browser will choose the throw.
 3. Photo/camera/cheese/pose-for-camera always returns one single victory gesture: {"ans":"2"}. Never use a sequence for photo requests.
 4. Only direct hand/gesture commands should use {"ans":"0"..."9"}.
 5. Reply language lock: the user's language is {{LANGUAGE_NAME}}. The "reply" field MUST be {{REPLY_LANGUAGE_RULE}}.
@@ -184,8 +184,26 @@ Gesture codes:
         if (isLikelyMathQuestion(text)) return false;
         if (detectAchievementIntent(text)) return false;
         const raw = String(text || '').toLowerCase();
-        const compact = raw.replace(/\s+/g, '');
-        if (/(石头剪刀布|猜拳|rockpaperscissors?|scissors?paperstone|rockscissorspaper|paperrockscissors?|paperscissors?stone|stonescissors?paper|stonepaperscissors?|playrps|\brps\b)/i.test(compact)) return true;
+        const compact = raw.replace(/[\s，。！？、,.!?;；:：'"“”‘’·_-]+/g, '');
+
+        // Named game expressions are enough on their own. Keep this separate from
+        // individual gesture commands such as “出石头” or “比剪刀手”.
+        if (/(猜拳|划拳|猜丁壳|猜丁硞|锤子剪刀布|playrps|\brps\b)/i.test(raw) || /playrps/i.test(compact)) return true;
+
+        // Chinese speakers use both 剪刀/剪子 and often change the conventional
+        // word order. Treat the presence of all three throws as the game rather
+        // than enumerating every possible phrase.
+        const hasZhRock = /(石头|锤子)/.test(compact);
+        const hasZhScissors = /(剪刀|剪子)/.test(compact);
+        const hasZhPaper = /布/.test(compact);
+        if (hasZhRock && hasZhScissors && hasZhPaper) return true;
+
+        // With an explicit game/start cue, two throw names are sufficient for
+        // natural shortened requests such as “来一局石头剪刀”.
+        const hasZhGameCue = /(玩|来一局|来一把|开始|开一局|比一局|游戏)/.test(compact);
+        const zhThrowCount = Number(hasZhRock) + Number(hasZhScissors) + Number(hasZhPaper);
+        if (hasZhGameCue && zhThrowCount >= 2) return true;
+
         const hasRock = /\b(rock|stone)\b/i.test(raw);
         const hasPaper = /\bpaper\b/i.test(raw);
         const hasScissors = /\bscissors?\b/i.test(raw);

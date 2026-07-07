@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Embodied AI Soft Robotics Client V10.5</title>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
@@ -13,11 +12,6 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .header h2{ font-size:14px; letter-spacing:0.5px; font-weight:900; white-space:nowrap; }
 .header .logo-dot{ width:10px; height:10px; background:#39ff14; border-radius:50%; box-shadow:0 0 10px #39ff14; flex-shrink:0; }
 .header-right{ display:flex; gap:8px; align-items:center; }
-.input-group{ flex:1; max-width: 400px; }
-input{ width:100%; background:#0d1117; border:1px solid #30363d; color:white; padding:12px 15px; border-radius:8px; outline:none; font-size: 13px; }
-input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
-#startWebcamBtn, #stopWebcamBtn { background: linear-gradient(145deg,#1f6feb,#388bfd); color: white; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-#startWebcamBtn:hover, #stopWebcamBtn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,139,253,0.4); }
 .dropdown{ position:relative; display:inline-block; }
 .dropdown-btn{ padding:10px 16px; border:none; border-radius:7px; font-weight:bold; cursor:pointer; font-size:12px; color:white; transition:all 0.2s; white-space:nowrap; display:flex; align-items:center; gap:6px; }
 .dropdown-btn::after{ content:"▾"; font-size:10px; margin-left:2px; }
@@ -34,9 +28,8 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .panel-title { font-size: 13px; color: #388bfd; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #1f2937; padding-bottom: 8px; }
 .panel-title span { font-size: 11px; color: #8b949e; text-transform: none; font-weight: normal; margin-left: 5px; }
 .vision-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
-@media(max-width: 768px) { .vision-grid { grid-template-columns: 1fr; } }
 .video-wrapper { position: relative; background: #0d1117; border: 1px solid #21262d; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 240px; }
-#webcamVideo { transform: scaleX(-1); display: none; } 
+#webcamVideo { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; transform: scaleX(-1); }
 #outputCanvas { transform: scaleX(-1); width: 100%; height: auto; max-width: 480px; background: #000; border-radius: 8px; }
 .control-sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; margin-bottom: 20px; }
 .slider-group { display: flex; flex-direction: column; gap: 8px; }
@@ -44,7 +37,6 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .slider-group label span { color: #39ff14; font-family: monospace; }
 .slider-group input[type="range"] { width: 100%; accent-color: #388bfd; background: #0d1117; height: 6px; border-radius: 3px; outline: none; cursor: pointer; }
 .motor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; margin-bottom: 20px; }
-@media(max-width: 768px) { .motor-grid { grid-template-columns: 1fr; } }
 .motor-col { display: flex; flex-direction: column; gap: 6px; align-items: center; background: #0d1117; padding: 12px 8px; border-radius: 8px; border: 1px solid #21262d; }
 .motor-col span { font-size: 11px; font-weight: bold; color: #8b949e; }
 .motor-col .motor-val { color: #388bfd; font-family: monospace; font-size: 13px; }
@@ -54,48 +46,38 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 #macroRecordBtn { background: #f0883b; color: white; }
 .macro-indicator { font-size: 13px; color: #8b949e; flex: 1; text-align: right; font-weight: 500; }
 .library-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; }
-.library-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: all 0.2s; }
-.library-card.card-running { border-color: #ff3b3b; box-shadow: 0 0 15px rgba(255,59,59,0.15); background: #221418; }
+.library-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.library-card.card-running { border-color: #ff3b3b; background: #221418; }
 .library-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
 .library-name { font-size: 14px; font-weight: bold; color: #e6edf3; }
 .library-meta { font-size: 11px; color: #8b949e; }
 .card-actions { display: flex; gap: 8px; align-items: center; }
-.run-seq-btn { background: #8a2be2; color: white; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; transition: all 0.2s; text-align: center; }
-.run-seq-btn:hover { background: #9933ff; }
-.run-seq-btn.active-stop { background: #ff3b3b !important; color: white; } 
-.run-seq-btn.active-stop:hover { background: #b30000 !important; }
-.pause-seq-btn { background: #ffaa00; color: #0a0f1d; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; transition: all 0.2s; text-align: center; }
-.pause-seq-btn:hover { background: #ffbe33; }
+.run-seq-btn { background: #8a2be2; color: white; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; }
+.run-seq-btn.active-stop { background: #ff3b3b !important; } 
+.pause-seq-btn { background: #ffaa00; color: #0a0f1d; border: none; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; min-width: 85px; }
 .pause-seq-btn.btn-is-paused { background: #238636 !important; color: white; } 
-.del-seq-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; transition: all 0.2s; }
-.del-seq-btn:hover { background: #b30000; color: white; border-color: #b30000; }
+.del-seq-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 12px; }
 .text-chat-box { display: flex; gap: 10px; margin-bottom: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #21262d; }
 .text-chat-box input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: white; padding: 12px; border-radius: 6px; }
-.text-chat-box button { background: #238636; color: white; border: none; padding: 0 22px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-.text-chat-box button:hover { background: #2ea043; }
+.text-chat-box button { background: #238636; color: white; border: none; padding: 0 22px; border-radius: 6px; font-weight: bold; font-size: 13px; }
 .lang-selector-box { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; background: #161b22; padding: 8px 15px; border-radius: 8px; width: fit-content; border: 1px solid #21262d; }
 .lang-radio { cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #8b949e; }
 .lang-radio input { width: auto; cursor: pointer; accent-color: #388bfd; }
 .lang-radio.active-lang { color: #58a6ff; font-weight: bold; }
 .voice-toggle-box,.model-source-box { display:flex; gap:10px; align-items:center; margin-bottom:15px; background:#161b22; padding:8px 15px; border-radius:8px; width:fit-content; border:1px solid #21262d; }
 .voice-toggle-box .toggle-label{ font-size:12px; color:#8b949e; }
-.toggle-switch{ position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; }
+.toggle-switch { position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; }
 .toggle-switch input{ opacity:0; width:0; height:0; }
 .toggle-slider{ position:absolute; cursor:pointer; inset:0; background:#30363d; transition:0.3s; border-radius:22px; }
 .toggle-slider::before{ content:""; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#8b949e; transition:0.3s; border-radius:50%; }
 .toggle-switch input:checked + .toggle-slider{ background:#238636; }
 .toggle-switch input:checked + .toggle-slider::before{ transform:translateX(18px); background:white; }
-.model-toggle-btn{ padding:6px 12px; border-radius:0; cursor:pointer; font-size:11px; font-weight:bold; transition:all 0.2s; background:#161b22; color:#8b949e; border:1px solid #30363d; }
-.model-toggle-btn:first-of-type{ border-radius:5px 0 0 5px; }
-.model-toggle-btn:last-of-type{ border-radius:0 5px 5px 0; }
+.model-toggle-btn{ padding:6px 12px; cursor:pointer; font-size:11px; font-weight:bold; background:#161b22; color:#8b949e; border:1px solid #30363d; }
 .model-toggle-btn.model-active{ background:#1f6feb !important; color:white !important; border-color:#388bfd !important; }
-.model-toggle-btn:disabled{ opacity:0.4; cursor:not-allowed; }
 .control-zone { display: flex; gap: 30px; justify-content: center; margin: 15px 0; }
-.circle-btn { width:150px; height:150px; border-radius:50%; border:none; cursor:pointer; font-size:15px; font-weight:bold; color:white; transition:all 0.3s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-#recordBtn { background: linear-gradient(145deg,#238636,#2ea043); box-shadow:0 0 20px rgba(46,160,67,0.2); }
-#recordBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(46,160,67,0.4); }
-#stopBtn { background: linear-gradient(145deg,#b30000,#ff3b3b); box-shadow:0 0 20px rgba(255,59,59,0.2); }
-#stopBtn:hover { transform: scale(1.03); box-shadow:0 0 30px rgba(255,59,59,0.4); }
+.circle-btn { width:150px; height:150px; border-radius:50%; border:none; cursor:pointer; font-size:15px; font-weight:bold; color:white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+#recordBtn { background: linear-gradient(145deg,#238636,#2ea043); }
+#stopBtn { background: linear-gradient(145deg,#b30000,#ff3b3b); }
 .recording { animation: pulse 1.2s infinite; background: #ff3b3b !important; }
 #speechText { font-size:20px; color:#58a6ff; min-height:32px; text-align: center; font-style: italic; margin-bottom: 8px; font-weight: 500; }
 #status { font-size:14px; color:#f0b429; text-align: center; font-family: monospace; }
@@ -103,15 +85,14 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 .status-bar .status-dot{ width:7px; height:7px; border-radius:50%; background:#30363d; flex-shrink:0; }
 .status-bar .status-dot.live{ background:#39ff14; box-shadow:0 0 6px #39ff14; }
 .status-bar .status-info{ font-size:10px; color:#8b949e; }
-.btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-@media(min-width: 600px) { .btn-grid { grid-template-columns: repeat(5, 1fr); } }
-.action-btn { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: center; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: center; font-weight: bold; }
+.btn-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.action-btn { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 14px 8px; border-radius: 8px; cursor: pointer; text-align: center; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: center; font-weight: bold; }
 .action-btn:hover { background: #21262d; border-color: #8b949e; color: white; }
-.action-btn span { font-size: 11px; opacity: 0.6; font-weight: normal; block-size: auto; }
+.action-btn span { font-size: 11px; opacity: 0.6; font-weight: normal; }
 .display-container { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0d1117; border-radius: 12px; border: 1px solid #21262d; padding: 20px; margin: 20px 0; min-height: 200px; }
-.huge-display { font-size: 80px; font-weight: 900; color: #39ff14; text-shadow: 0 0 20px rgba(57,255,20,0.4); font-family: Impact, sans-serif; line-height: 1; }
-.pose-text-display { font-size: 18px; color: #58a6ff; margin-top: 10px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; }
-.countdown-display { font-size: 14px; color: #ff3b3b; margin-top: 12px; font-family: monospace; font-weight: bold; letter-spacing: 0.5px; height: 18px; }
+.huge-display { font-size: 80px; font-weight: 900; color: #39ff14; text-shadow: 0 0 20px rgba(57,255,20,0.4); font-family: Impact, sans-serif; }
+.pose-text-display { font-size: 18px; color: #58a6ff; margin-top: 10px; font-weight: bold; text-transform: uppercase; }
+.countdown-display { font-size: 14px; color: #ff3b3b; margin-top: 12px; font-family: monospace; font-weight: bold; }
 .json-preview { background: #0d1117; color: #48bb78; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid #21262d; margin-top: 10px; }
 </style>
 </head>
@@ -142,45 +123,73 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
 
 <div class="main-container">
     <div class="panel">
-        <div class="panel-title">📷 Real-time Computer Vision Motion Capture <span>/ 计算机视觉人手实时动捕追踪舱</span></div>
+        <div class="panel-title">📷 Real-time Computer Vision Motion Capture <span>/ 计算机视觉人手实时动捕追踪</span></div>
         <div class="vision-grid">
             <div class="video-wrapper">
-                <video id="webcamVideo" width="480" height="360" autoplay playsinline></video>
+                <video id="webcamVideo" width="480" height="360" autoplay muted playsinline></video>
                 <canvas id="outputCanvas" width="480" height="360"></canvas>
             </div>
             <div style="display: flex; flex-direction: column; justify-content: center; gap: 15px;">
-                <button id="startWebcamBtn" onclick="startCamera()" style="background: linear-gradient(145deg, #238636, #2ea043);">🟢 Open Video Capture Stream</button>
-                <button id="stopWebcamBtn" onclick="stopCamera()" style="background: linear-gradient(145deg, #b30000, #ff3b3b);">🛑 Close Video Capture Stream</button>
+                <button id="startWebcamBtn" onclick="startCamera()" style="background: linear-gradient(145deg, #238636, #2ea043); color:white; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟢 Open Video Capture Stream</button>
+                <button id="stopWebcamBtn" onclick="stopCamera()" style="background: linear-gradient(145deg, #b30000, #ff3b3b); color:white; padding:12px; border-radius:8px; border:none; cursor:pointer;">🛑 Close Video Capture Stream</button>
                 <div style="background:#161b22; padding:15px; border-radius:8px; border:1px solid #21262d; font-size:12px; line-height: 1.6;">
                     <span style="color:#58a6ff; font-weight:bold;">💡 Guide / 使用指南：</span><br>
                     1. Bind physical Type-C serial port or BLE connection.<br>
                     2. Click the green button to start the camera and allow permissions.<br>
-                    3. Place your palm in the center of the screen. The high-frequency pipeline tracks 21 key landmarks, maps 5-axis bending states directly into angular limits (0° open → 180° curl), and pushes streams directly without interpolating latency frames. If macro recording is enabled, it captures live motion frames streaming at 50Hz for seamless tracking playback.<br>
-                    <br>
-                    1. 绑定 Type-C 数据线或 BLE 蓝牙通路。<br>
-                    2. 点击绿色按钮启动摄像头并允许浏览器调用权限。<br>
-                    3. 将手掌置于视野中央。动捕模型将高频提取 21 个骨骼点，计算弯曲角度（0° 伸直 → 180° 握拳）并发送。在开启录制状态下，系统会以 50Hz 的流式频率直接捕捉手势轨迹，生成连续无顿挫的回放序列。
+                    3. Place your palm in the center of the screen.
                 </div>
             </div>
         </div>
     </div>
 
     <div class="panel">
-        <div class="panel-title">🎚️ Real-time Bézier Trajectory Tuning <span>/ 贝塞尔曲线运动控制动态调节</span></div>
-        <div class="control-sliders">
-            <div class="slider-group">
-                <label>Motion Duration (ms) <span><span id="valDuration">800</span> ms</span></label>
-                <input id="slideDuration" type="range" min="200" max="3000" step="50" value="800" oninput="updateSliderLabels()">
+        <div class="panel-title">🌐 Wireless Data Link Switches <span>/ 无线数据源同步控制中枢</span></div>
+        <div style="display: flex; gap: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px dashed #388bfd; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+                <span style="font-size: 13px; font-weight: bold; color: #8b949e;">🧤 Smart Glove Sync:</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="gloveDataToggle" onchange="toggleGloveSync()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="gloveToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
             </div>
-            <div class="slider-group">
-                <label>Frame Step Delay (ms) <span><span id="valStepDelay">16</span> ms</span></label>
-                <input id="slideStepDelay" type="range" min="5" max="50" step="1" value="16" oninput="updateSliderLabels()">
+            
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+                <span style="font-size: 13px; font-weight: bold; color: #8b949e;">🥽 Meta Quest 3 Sync:</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="vrDataToggle" onchange="toggleVRSync()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="vrToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+                <span style="font-size: 13px; font-weight: bold; color: #8b949e;">📏 Orbbec Depth Sync:</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="depthDataToggle" onchange="toggleDepthSync()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span id="depthToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
             </div>
         </div>
     </div>
 
     <div class="panel">
-        <div class="panel-title">🕹️ Independent Motor Manual Sliders <span>/ 5轴手指马达独立手动控制滑块</span></div>
+        <div class="panel-title">🎚️ Real-time Trajectory Tuning <span>/ 硬件级平滑系数动态调节</span></div>
+        <div class="control-sliders">
+            <div class="slider-group">
+                <label>Hardware Smooth Step <span><span id="valDuration">0.15</span> (0.01~1.00)</span></label>
+                <input id="slideDuration" type="range" min="0.01" max="1.00" step="0.01" value="0.15" oninput="updateSliderLabels()">
+            </div>
+            <div class="slider-group">
+                <label>Refresh Mode <span>HARDWARE AUTO</span></label>
+                <input id="slideStepDelay" type="range" min="10" max="100" step="5" value="25" disabled style="opacity:0.3;">
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">🕹️ Independent Motor Manual Sliders <span>/ 5根手指马达独立手动控制滑块</span></div>
         <div class="motor-grid">
             <div class="motor-col">
                 <span>👍 Thumb (P0)</span>
@@ -220,9 +229,9 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
     </div>
 
     <div class="panel">
-        <div class="panel-title">🎤 Embodied Agent Intelligence Cabin <span>/ 具身智能自然语言交互舱</span></div>
+        <div class="panel-title">🎤 Embodied Agent Intelligence Cabin <span>/ AI语言交互</span></div>
         <div class="text-chat-box">
-            <input id="textInput" type="text" placeholder="Type command here and press Enter... / 在这里输入文字指令并回车..." onkeydown="if(event.key==='Enter') sendTextMessage()">
+            <input id="textInput" type="text" placeholder="Type command here and press Enter..." onkeydown="if(event.key==='Enter') sendTextMessage()">
             <button onclick="sendTextMessage()">Send / 发送</button>
         </div>
         <div class="lang-selector-box">
@@ -251,10 +260,10 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
                 <span id="ollamaStatusText" style="color:#8b949e;">Probing...</span>
             </span>
         </div>
-        <div id="speechText">"Waiting for user input... / 等待语音或文字输入..."</div>
+        <div id="speechText">"Waiting for user input..."</div>
         <div class="control-zone">
-            <button id="recordBtn" class="circle-btn"><div>🎙️ Speak</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">Click to talk</div></button>
-            <button id="stopBtn" class="circle-btn" onclick="emergencyStop()"><div>🛑 RESET</div><div style="font-size:11px; font-weight:normal; opacity:0.7;">Emergency stop</div></button>
+            <button id="recordBtn" class="circle-btn"><div>🎙️ Speak</div></button>
+            <button id="stopBtn" class="circle-btn" onclick="emergencyStop()"><div>🛑 RESET</div></button>
         </div>
     </div>
 
@@ -268,26 +277,39 @@ input:focus{ border-color:#388bfd; box-shadow:0 0 10px rgba(56,139,253,0.3); }
             <button class="action-btn" onclick="triggerDirect('4')">🖐️ Four <span>数字 4</span></button>
             <button class="action-btn" onclick="triggerDirect('5')">✋ Open <span>数字 5</span></button>
             <button class="action-btn" onclick="triggerDirect('6')">🤙 Call-Me <span>数字 6</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7')">🤘 Rock <span>摇滚手势</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8')">👌 Precision OK <span>OK手势</span></button>
-            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9')">👍 Thumbs Up <span>点赞手势</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('7')">🤘 Rock <span>摇滚</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('8')">👌 Precision OK <span>OK</span></button>
+            <button class="action-btn" style="color:#58a6ff; border-color:#388bfd;" onclick="triggerDirect('9')">👍 Thumbs Up <span>点赞</span></button>
         </div>
         <div class="display-container">
             <div id="hugeDisplay" class="huge-display">?</div>
-            <div id="poseTextDisplay" class="pose-text-display">System Ready / 系统就绪</div>
+            <div id="poseTextDisplay" class="pose-text-display">System Ready</div>
             <div id="countdownDisplay" class="countdown-display"></div>
         </div>
-        <div id="jsonPreview" class="json-preview">📡 Type-C serial bus ready / 串口总线就绪。</div>
+        <div id="jsonPreview" class="json-preview">📡 Type-C serial bus ready</div>
     </div>
 </div>
 
 <div class="status-bar">
     <span class="status-dot" id="statusDot"></span>
-    <span id="status">Please bind physical Type-C serial port / 请绑定物理数据线串口...</span>
+    <span id="status">Please bind physical Type-C serial port...</span>
     <span class="status-info" id="statusInfo"></span>
 </div>
 
 <script src="js/robot-hand-rules.js"></script>
+<script>
+if (typeof RobotHandRules === 'undefined') {
+    window.RobotHandRules = {
+        detectUserLanguage: () => "zh-CN",
+        tryEvaluateMathQuestion: () => null,
+        detectRPSIntent: () => false,
+        detectLocalGestureIntent: () => null,
+        loadSystemPrompt: () => "Return JSON",
+        extractFirstJSON: (text) => text
+    };
+}
+</script>
+
 <script>
 const POSES_DICTIONARY = {
     "0": [180, 180, 180, 180, 180], "1": [180, 0, 180, 180, 180], "2": [180, 0, 0, 180, 180], 
@@ -302,94 +324,382 @@ const EM_TEXT_DISPLAY = {
 };
 
 let recognition, isRecording = false, finalTranscript = "", currentSTTLanguage = "zh-CN";
-let serialPort = null;
-let serialWriter = null;
-let serialWritableClosed = null;
-let serialDisconnecting = false;
-let bleDevice = null;
-let bleServer = null;
-let bleCharacteristic = null;
-let bleWriteBusy = false;
-let bleLastSendTime = 0;
-let currentModelSource = 'cloud';
-let ollamaAvailable = false;
-let ollamaCheckComplete = false;
-let voiceEnabled = false;
-const OLLAMA_BASE_URL = 'http://localhost:11434';
-const OLLAMA_MODEL = 'qwen2.5-coder:1.5b';
+let serialPort = null, serialWriter = null, serialWritableClosed = null;
+let bleDevice = null, bleServer = null, bleCharacteristic = null;
+let hardwareWriteChain = Promise.resolve();
+let depthWriteInFlight = false;
+let latestDepthAnglesPayload = null;
+let visionWriteInFlight = false;
+let latestVisionAnglesPayload = null;
+let streamWriteGeneration = 0;
+let selectedHardwareMode = "none";
+let currentModelSource = 'cloud', ollamaAvailable = false, voiceEnabled = false;
+const OLLAMA_BASE_URL = 'http://localhost:11434', OLLAMA_MODEL = 'qwen2.5-coder:1.5b';
 
 const BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
 const BLE_CHARACTERISTIC_UUID = "abcd1234-5678-90ab-cdef-1234567890ab";
 
 let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
-let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {}, activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
+let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {};
+let activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
 let lastActionTime = 0;
 
-// 专门为摄像头随动打造的前端低通平滑缓存（完美替代复杂的贝塞尔动画，找回中间度数，极速防爆）
 let visionSmoothedAngles = [0, 0, 0, 0, 0];
 const VISION_SMOOTH_FACTOR = 0.28; 
 
 let currentAngles = [0, 0, 0, 0, 0];
-let targetAngles = [0, 0, 0, 0, 0];
-let startAngles = [0, 0, 0, 0, 0];
-let bezierStartTime = 0;
-let bezierTimeoutId = null;
-
+let lastVisionSendTime = 0;
+let isGloveSyncEnabled = false, isVRSyncEnabled = false, isDepthSyncEnabled = false;
+let depthSocket = null, depthReconnectTimer = null, lastDepthSendTime = 0, depthSyncStartedAt = 0;
+let lastDepthSentAngle = null;
 let handsDetector = null;
-let cameraActiveInstance = null;
+let cameraStream = null;
+let cameraSessionId = 0;
+let cameraFrameRequestId = null;
+let cameraFrameBusy = false;
 let isVideoTracking = false;
-let lastVisionSendTime = 0; 
+
+const DEPTH_HTTP_URL = "http://localhost:8766";
+const DEPTH_WS_URL = "ws://localhost:8765";
+const HARDWARE_WRITE_TIMEOUT_MS = 700;
+const DEPTH_SEND_INTERVAL_MS = 300;
+const DEPTH_ARMING_DELAY_MS = 1200;
+const VISION_SEND_INTERVAL_MS = 150;
+const RECORD_STREAM_INTERVAL_MS = 150;
+const PLAYBACK_MIN_DELAY_MS = 80;
+const RECORD_COMPACT_ANGLE_DELTA = 2;
+
+function timeoutPromise(ms, label) {
+    return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), ms));
+}
+
+async function writeRawToHardware(payloadStr, label = "Command") {
+    if (serialWriter) {
+        await Promise.race([serialWriter.write(payloadStr + "\n"), timeoutPromise(HARDWARE_WRITE_TIMEOUT_MS, "Serial write")]);
+        document.getElementById("jsonPreview").textContent = `🚀 Serial ${label} -> ${payloadStr}`;
+        return true;
+    }
+    if (bleCharacteristic) {
+        await bleCharacteristic.writeValueWithResponse(new TextEncoder().encode(payloadStr));
+        document.getElementById("jsonPreview").textContent = `🔵 BLE ${label} -> ${payloadStr}`;
+        return true;
+    }
+    return false;
+}
+
+function clearStreamingCommandBuffers() {
+    latestDepthAnglesPayload = null;
+    latestVisionAnglesPayload = null;
+    lastDepthSentAngle = null;
+    streamWriteGeneration++;
+}
+
+function enqueueHardwareWrite(payload, label = "Command", options = {}) {
+    const payloadStr = typeof payload === "string" ? payload : JSON.stringify(payload);
+    if (options.priority) {
+        clearStreamingCommandBuffers();
+    }
+    const taskGeneration = options.stream ? streamWriteGeneration : null;
+    if (options.dropIfBusy && (depthWriteInFlight || visionWriteInFlight)) {
+        return Promise.resolve(false);
+    }
+    const writeTask = hardwareWriteChain.catch(() => {}).then(() => {
+        if (options.stream && taskGeneration !== streamWriteGeneration) {
+            return false;
+        }
+        return writeRawToHardware(payloadStr, label);
+    });
+    hardwareWriteChain = writeTask;
+    return writeTask.catch(err => {
+        setStatus(`${label} write failed: ${err.message}`);
+        return false;
+    });
+}
+
+function setStatus(text) {
+    document.getElementById("status").textContent = text;
+}
+
+async function setHardwareControlMode(mode) {
+    try {
+        await enqueueHardwareWrite({ mode }, "Mode");
+        selectedHardwareMode = mode;
+        setStatus(`Hardware mode: ${mode.toUpperCase()}.`);
+        return true;
+    } catch (err) {
+        setStatus("Mode error: " + err.message);
+        return false;
+    }
+}
+
+function updateWirelessToggleUI() {
+    document.getElementById('gloveToggleStatus').textContent = isGloveSyncEnabled ? 'LIVE TRANSMIT' : 'DISABLED';
+    document.getElementById('gloveToggleStatus').style.color = isGloveSyncEnabled ? '#39ff14' : '#8b949e';
+    document.getElementById('vrToggleStatus').textContent = isVRSyncEnabled ? 'LIVE TRANSMIT' : 'DISABLED';
+    document.getElementById('vrToggleStatus').style.color = isVRSyncEnabled ? '#39ff14' : '#8b949e';
+    document.getElementById('depthToggleStatus').textContent = isDepthSyncEnabled ? 'LIVE DEPTH' : 'DISABLED';
+    document.getElementById('depthToggleStatus').style.color = isDepthSyncEnabled ? '#39ff14' : '#8b949e';
+}
+
+function activateWebControlMode() {
+    isGloveSyncEnabled = false;
+    isVRSyncEnabled = false;
+    stopDepthSync({ notifyGateway: true, silent: true });
+    document.getElementById('gloveDataToggle').checked = false;
+    document.getElementById('vrDataToggle').checked = false;
+    updateWirelessToggleUI();
+}
+
+async function toggleGloveSync() {
+    isGloveSyncEnabled = document.getElementById('gloveDataToggle').checked;
+    if (isGloveSyncEnabled) {
+        if(isVideoTracking) stopCamera(); 
+        stopDepthSync({ notifyGateway: true, silent: true });
+        document.getElementById('vrDataToggle').checked = false; 
+        isVRSyncEnabled = false;
+        await setHardwareControlMode("glove");
+    } else {
+        await setHardwareControlMode("none");
+    }
+    updateWirelessToggleUI();
+}
+
+async function toggleVRSync() {
+    isVRSyncEnabled = document.getElementById('vrDataToggle').checked;
+    if (isVRSyncEnabled) {
+        if(isVideoTracking) stopCamera(); 
+        stopDepthSync({ notifyGateway: true, silent: true });
+        document.getElementById('gloveDataToggle').checked = false; 
+        isGloveSyncEnabled = false;
+        await setHardwareControlMode("vr");
+    } else {
+        await setHardwareControlMode("none");
+    }
+    updateWirelessToggleUI();
+}
+
+async function toggleDepthSync() {
+    if (document.getElementById('depthDataToggle').checked) {
+        await startDepthSync();
+    } else {
+        stopDepthSync({ notifyGateway: true });
+    }
+}
+
+async function startDepthSync() {
+    if (isVideoTracking) stopCamera();
+    document.getElementById('gloveDataToggle').checked = false;
+    document.getElementById('vrDataToggle').checked = false;
+    isGloveSyncEnabled = false;
+    isVRSyncEnabled = false;
+    stopAnyRunningSequence();
+    clearAllTimers();
+    setHardwareControlMode("none");
+
+    isDepthSyncEnabled = true;
+    depthSyncStartedAt = Date.now();
+    document.getElementById('depthDataToggle').checked = true;
+    updateWirelessToggleUI();
+    setStatus("Connecting Orbbec depth gateway...");
+    currentAngles = [0, 0, 0, 0, 0];
+    syncSlidersUIOnly();
+    sendTargetAnglesToHardware(0, 0, 0, 0, 0, { priority: true });
+
+    try {
+        const resp = await fetch(`${DEPTH_HTTP_URL}/mode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "depth" })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        connectDepthWebSocket();
+        setStatus("Orbbec depth sync active.");
+    } catch (err) {
+        stopDepthSync({ notifyGateway: false, silent: true });
+        setStatus(`Orbbec gateway not running: ${err.message}`);
+    }
+}
+
+function connectDepthWebSocket() {
+    if (depthReconnectTimer) clearTimeout(depthReconnectTimer);
+    if (depthSocket) depthSocket.close();
+
+    depthSocket = new WebSocket(DEPTH_WS_URL);
+    depthSocket.onopen = () => setStatus("Orbbec depth stream connected.");
+    depthSocket.onmessage = (event) => {
+        try {
+            applyDepthGatewayData(JSON.parse(event.data));
+        } catch (_) {}
+    };
+    depthSocket.onerror = () => {
+        if (isDepthSyncEnabled) setStatus("Orbbec depth WebSocket error.");
+    };
+    depthSocket.onclose = () => {
+        depthSocket = null;
+        if (isDepthSyncEnabled) {
+            setStatus("Orbbec depth stream reconnecting...");
+            depthReconnectTimer = setTimeout(connectDepthWebSocket, 1000);
+        }
+    };
+}
+
+function applyDepthGatewayData(data) {
+    if (!isDepthSyncEnabled || data.type !== "depth_gateway_data") return;
+    const angle = Math.max(0, Math.min(180, Math.round(Number(data.angle) || 0)));
+
+    const now = Date.now();
+    if (now - depthSyncStartedAt < DEPTH_ARMING_DELAY_MS) {
+        document.getElementById("hugeDisplay").textContent = "📏";
+        document.getElementById("poseTextDisplay").textContent =
+            `Depth arming... ${data.smoothed}mm`;
+        document.getElementById("jsonPreview").textContent =
+            `📏 raw=${data.raw}mm filtered=${data.smoothed}mm control=${data.control_distance}mm angle=${angle} sent=waiting`;
+        return;
+    }
+
+    currentAngles = [angle, angle, angle, angle, angle];
+    syncSlidersUIOnly();
+
+    document.getElementById("hugeDisplay").textContent = "📏";
+    document.getElementById("poseTextDisplay").textContent =
+        `FILTERED ${data.smoothed}MM -> TARGET ${angle}DEG`;
+    document.getElementById("jsonPreview").textContent =
+        `📏 raw=${data.raw}mm filtered=${data.smoothed}mm control=${data.control_distance}mm target=${angle}deg sent=${lastDepthSentAngle ?? "-"}deg center=${data.center}mm`;
+    if (isMacroRecording && now - lastActionTime >= RECORD_STREAM_INTERVAL_MS) {
+        recordCustomAngles("Orbbec Depth Stream", RECORD_STREAM_INTERVAL_MS, true);
+    }
+    if (now - lastDepthSendTime > DEPTH_SEND_INTERVAL_MS) {
+        queueDepthAngles(angle);
+        lastDepthSendTime = now;
+    }
+}
+
+function queueDepthAngles(angle) {
+    latestDepthAnglesPayload = {
+        p0: angle,
+        p1: angle,
+        p2: angle,
+        p3: angle,
+        p4: angle
+    };
+    flushLatestDepthAngles();
+}
+
+async function flushLatestDepthAngles() {
+    if (!isDepthSyncEnabled || depthWriteInFlight || !latestDepthAnglesPayload) return;
+    depthWriteInFlight = true;
+    const payload = latestDepthAnglesPayload;
+    latestDepthAnglesPayload = null;
+    try {
+        const ok = await enqueueHardwareWrite(payload, "DepthAngles", { stream: true });
+        if (ok !== false) lastDepthSentAngle = payload.p0;
+    } finally {
+        depthWriteInFlight = false;
+        if (isDepthSyncEnabled && latestDepthAnglesPayload) {
+            setTimeout(flushLatestDepthAngles, DEPTH_SEND_INTERVAL_MS);
+        }
+    }
+}
+
+function stopDepthSync(options = {}) {
+    const notifyGateway = options.notifyGateway !== false;
+    isDepthSyncEnabled = false;
+    if (depthReconnectTimer) clearTimeout(depthReconnectTimer);
+    depthReconnectTimer = null;
+    if (depthSocket) {
+        depthSocket.close();
+        depthSocket = null;
+    }
+    latestDepthAnglesPayload = null;
+    lastDepthSentAngle = null;
+    const toggle = document.getElementById('depthDataToggle');
+    if (toggle) toggle.checked = false;
+    updateWirelessToggleUI();
+    if (notifyGateway) {
+        fetch(`${DEPTH_HTTP_URL}/mode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "none" })
+        }).catch(() => {});
+    }
+    if (!options.silent) setStatus("Orbbec depth sync stopped.");
+}
 
 function initMediaPipeHands() {
-    handsDetector = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
-    handsDetector.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 0, 
-        minDetectionConfidence: 0.5, 
-        minTrackingConfidence: 0.6
-    });
+    handsDetector = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    handsDetector.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.6 });
     handsDetector.onResults(onHandVisionResults);
 }
 
-function startCamera() {
-    if (!handsDetector) initMediaPipeHands();
+function releaseCameraResources() {
+    isVideoTracking = false;
+    cameraFrameBusy = false;
+    if (cameraFrameRequestId !== null) cancelAnimationFrame(cameraFrameRequestId);
+    cameraFrameRequestId = null;
     const videoElement = document.getElementById('webcamVideo');
-    stopAnyRunningSequence();
-    clearAllTimers();
-    isVideoTracking = true;
-    cameraActiveInstance = new Camera(videoElement, {
-        onFrame: async () => {
-            if (isVideoTracking) {
-                await handsDetector.send({ image: videoElement });
+    if (cameraStream && cameraStream.getTracks) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+    cameraStream = null;
+    videoElement.pause();
+    videoElement.srcObject = null;
+}
+
+function runCameraFrameLoop(sessionId) {
+    if (!isVideoTracking || sessionId !== cameraSessionId) return;
+    const videoElement = document.getElementById('webcamVideo');
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d');
+    if (!cameraFrameBusy && videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+            if (canvas.width !== videoElement.videoWidth || canvas.height !== videoElement.videoHeight) {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
             }
-        },
-        width: 480,
-        height: 360
-    });
-    cameraActiveInstance.start()
-        .then(() => setStatus("Camera vision active."))
-        .catch(err => setStatus("Camera failed: " + err.message));
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        }
+        cameraFrameBusy = true;
+        handsDetector.send({ image: videoElement })
+            .catch(() => {})
+            .finally(() => { cameraFrameBusy = false; });
+    }
+    cameraFrameRequestId = requestAnimationFrame(() => runCameraFrameLoop(sessionId));
+}
+
+async function startCamera() {
+    const sessionId = ++cameraSessionId;
+    releaseCameraResources();
+    if (!handsDetector) initMediaPipeHands();
+    activateWebControlMode();
+    clearAllTimers();
+
+    const videoElement = document.getElementById('webcamVideo');
+    setStatus('Starting camera...');
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { width: 480, height: 360 } });
+        if (sessionId !== cameraSessionId) return;
+        videoElement.srcObject = cameraStream;
+        await videoElement.play();
+        isVideoTracking = true;
+        setStatus('Camera active.');
+        runCameraFrameLoop(sessionId);
+    } catch (error) {
+        setStatus(`Camera failed: ${error.message}`);
+    }
 }
 
 function stopCamera() {
-    isVideoTracking = false;
-    if (cameraActiveInstance) {
-        cameraActiveInstance.stop();
-    }
+    cameraSessionId++;
+    releaseCameraResources();
+    latestVisionAnglesPayload = null;
     const canvas = document.getElementById('outputCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setStatus("Camera stream disconnected.");
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    setStatus("Camera stream closed.");
 }
 
 function calculateDistance(pt1, pt2) {
-    return Math.sqrt(
-        Math.pow(pt1.x - pt2.x, 2) +
-        Math.pow(pt1.y - pt2.y, 2) +
-        Math.pow(pt1.z - pt2.z, 2)
-    );
+    return Math.sqrt(Math.pow(pt1.x - pt2.x, 2) + Math.pow(pt1.y - pt2.y, 2) + Math.pow(pt1.z - pt2.z, 2));
 }
 
 function calculateJointAngle(pA, pB, pC) {
@@ -398,18 +708,15 @@ function calculateJointAngle(pA, pB, pC) {
     let dotProduct = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     let normV1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z);
     let normV2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y + v2.z * v2.z);
-    let cosAngle = dotProduct / (normV1 * normV2);
-    let angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle))); 
-    return angleRad * (180 / Math.PI);
+    return Math.acos(Math.max(-1, Math.min(1, dotProduct / (normV1 * normV2)))) * (180 / Math.PI);
 }
 
 function onHandVisionResults(results) {
     const canvas = document.getElementById('outputCanvas');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (results.image) {
-        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-    }
+    if (results.image) ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+    
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
         drawSkeleton(ctx, landmarks);
@@ -418,105 +725,91 @@ function onHandVisionResults(results) {
         let angleRing   = calculateJointAngle(landmarks[13], landmarks[14], landmarks[16]);
         let anglePinky  = calculateJointAngle(landmarks[17], landmarks[18], landmarks[20]);
         let thumbDistance = calculateDistance(landmarks[4], landmarks[9]);
-        const mapAngle = (ang, minLimit=100, maxLimit=175) => {
+        
+        const mapAngle = (ang, minLimit=105, maxLimit=170) => {
             let t = (maxLimit - ang) / (maxLimit - minLimit); 
-            t = Math.max(0, Math.min(1, t));
-            return Math.round(t * 180);
-        };
-        const mapThumbDistance = (dist, minDist=0.08, maxDist=0.28) => {
-            let t = (maxDist - dist) / (maxDist - minDist); 
-            t = Math.max(0, Math.min(1, t));
-            return Math.round(t * 180);
+            return Math.round(Math.max(0, Math.min(1, t)) * 180);
         };
         
-        let rawP0 = mapThumbDistance(thumbDistance, 0.09, 0.26); 
-        let rawP1 = mapAngle(angleIndex, 105, 170);
-        let rawP2 = mapAngle(angleMiddle, 105, 170);
-        let rawP3 = mapAngle(angleRing, 105, 170);
-        let rawP4 = mapAngle(anglePinky, 105, 170);
+        let rawP0 = Math.round(Math.max(0, Math.min(1, (0.26 - thumbDistance)/(0.26 - 0.09))) * 180);
+        let rawP1 = mapAngle(angleIndex);
+        let rawP2 = mapAngle(angleMiddle);
+        let rawP3 = mapAngle(angleRing);
+        let rawP4 = mapAngle(anglePinky);
 
-        // 【核心修改点 1】：摄像头使用直通低通滑动平滑算子，彻底脱离贝塞尔逻辑，不卡死不乱蹦
         visionSmoothedAngles[0] += (rawP0 - visionSmoothedAngles[0]) * VISION_SMOOTH_FACTOR;
         visionSmoothedAngles[1] += (rawP1 - visionSmoothedAngles[1]) * VISION_SMOOTH_FACTOR;
         visionSmoothedAngles[2] += (rawP2 - visionSmoothedAngles[2]) * VISION_SMOOTH_FACTOR;
         visionSmoothedAngles[3] += (rawP3 - visionSmoothedAngles[3]) * VISION_SMOOTH_FACTOR;
         visionSmoothedAngles[4] += (rawP4 - visionSmoothedAngles[4]) * VISION_SMOOTH_FACTOR;
 
-        let p0 = Math.round(visionSmoothedAngles[0]);
-        let p1 = Math.round(visionSmoothedAngles[1]);
-        let p2 = Math.round(visionSmoothedAngles[2]);
-        let p3 = Math.round(visionSmoothedAngles[3]);
-        let p4 = Math.round(visionSmoothedAngles[4]);
-
-        currentAngles = [p0, p1, p2, p3, p4];
-        for(let i=0; i<5; i++) {
-            document.getElementById(`slideM${i}`).value = currentAngles[i];
-            document.getElementById(`lblM${i}`).textContent = currentAngles[i] + "°";
-        }
+        currentAngles = visionSmoothedAngles.map(Math.round);
+        syncSlidersUIOnly();
         document.getElementById("hugeDisplay").textContent = "👁️";
-        document.getElementById("poseTextDisplay").textContent = "Vision Tracking";
+        document.getElementById("poseTextDisplay").textContent = "Vision Stream Active";
         
         let now = Date.now();
-        if (isMacroRecording) {
-            let diff = now - lastActionTime;
-            if (diff >= 25) { 
-                if (rehabMacroSequence.length > 0) {
-                    rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-                }
-                rehabMacroSequence.push({
-                    isCustomAngles: true,
-                    angles: [...currentAngles],
-                    label: "Mocap Stream",
-                    delayAfter: 25
-                });
-                lastActionTime = now;
-                document.getElementById("macroIndicator").textContent = `Streaming Mocap... (${rehabMacroSequence.length} frames recorded)`;
-            }
+        if (isMacroRecording && now - lastActionTime >= RECORD_STREAM_INTERVAL_MS) {
+            recordCustomAngles("Mocap Stream", RECORD_STREAM_INTERVAL_MS, true);
         }
-        
-        // 维持标准的 85ms JSON 安全防爆频率发送
-        if (now - lastVisionSendTime > 85) {
-            sendAnglesToESP32(p0, p1, p2, p3, p4);
+        if (now - lastVisionSendTime > VISION_SEND_INTERVAL_MS) {
+            queueVisionAngles(currentAngles);
             lastVisionSendTime = now;
         }
     }
 }
 
+function queueVisionAngles(angles) {
+    latestVisionAnglesPayload = {
+        p0: Math.max(0, Math.min(180, Math.round(angles[0]))),
+        p1: Math.max(0, Math.min(180, Math.round(angles[1]))),
+        p2: Math.max(0, Math.min(180, Math.round(angles[2]))),
+        p3: Math.max(0, Math.min(180, Math.round(angles[3]))),
+        p4: Math.max(0, Math.min(180, Math.round(angles[4])))
+    };
+    flushLatestVisionAngles();
+}
+
+async function flushLatestVisionAngles() {
+    if (!isVideoTracking || visionWriteInFlight || !latestVisionAnglesPayload) return;
+    visionWriteInFlight = true;
+    const payload = latestVisionAnglesPayload;
+    latestVisionAnglesPayload = null;
+    try {
+        await enqueueHardwareWrite(payload, "VisionAngles", { stream: true });
+    } finally {
+        visionWriteInFlight = false;
+        if (isVideoTracking && latestVisionAnglesPayload) {
+            setTimeout(flushLatestVisionAngles, VISION_SEND_INTERVAL_MS);
+        }
+    }
+}
+
 function drawSkeleton(ctx, landmarks) {
-    ctx.fillStyle = "#39ff14";
-    ctx.strokeStyle = "#388bfd";
-    ctx.lineWidth = 3;
-    const fingerConnections = [
-        [0,1,2,3,4],       
-        [0,5,6,7,8],       
-        [9,10,11,12],      
-        [13,14,15,16],     
-        [0,17,18,19,20],   
-        [5,9,13,17]        
-    ];
-    fingerConnections.forEach(chain => {
+    ctx.fillStyle = "#39ff14"; ctx.strokeStyle = "#388bfd"; ctx.lineWidth = 3;
+    const connections = [[0,1,2,3,4], [0,5,6,7,8], [9,10,11,12], [13,14,15,16], [0,17,18,19,20], [5,9,13,17]];
+    const canvasWidth = ctx.canvas.width, canvasHeight = ctx.canvas.height;
+    connections.forEach(chain => {
         ctx.beginPath();
         for (let i = 0; i < chain.length - 1; i++) {
-            let pt1 = landmarks[chain[i]];
-            let pt2 = landmarks[chain[i+1]];
-            ctx.moveTo(pt1.x * 480, pt1.y * 360);
-            ctx.lineTo(pt2.x * 480, pt2.y * 360);
+            ctx.moveTo(canvasWidth * landmarks[chain[i]].x, canvasHeight * landmarks[chain[i]].y);
+            ctx.lineTo(canvasWidth * landmarks[chain[i+1]].x, canvasHeight * landmarks[chain[i+1]].y);
         }
         ctx.stroke();
     });
     landmarks.forEach(pt => {
         ctx.beginPath();
-        ctx.arc(pt.x * 480, pt.y * 360, 4, 0, 2 * Math.PI);
+        ctx.arc(canvasWidth * pt.x, canvasHeight * pt.y, 4, 0, 2 * Math.PI);
         ctx.fill();
     });
 }
 
 function updateSliderLabels() {
     document.getElementById("valDuration").textContent = document.getElementById("slideDuration").value;
-    document.getElementById("valStepDelay").textContent = document.getElementById("slideStepDelay").value;
+    sendSpeedFactorToHardware();
 }
 
-function syncSlidersFromCurrentAngles() {
+function syncSlidersUIOnly() {
     for(let i=0; i<5; i++) {
         document.getElementById(`slideM${i}`).value = currentAngles[i];
         document.getElementById(`lblM${i}`).textContent = currentAngles[i] + "°";
@@ -525,89 +818,163 @@ function syncSlidersFromCurrentAngles() {
 
 function manualMotorMove(idx) {
     if(isVideoTracking) stopCamera();
+    activateWebControlMode();
     stopAnyRunningSequence();
     clearAllTimers();
     let val = parseInt(document.getElementById(`slideM${idx}`).value);
     document.getElementById(`lblM${idx}`).textContent = val + "°";
+    currentAngles[idx] = val;
     document.getElementById("hugeDisplay").textContent = "⚙️";
     document.getElementById("poseTextDisplay").textContent = "Manual Motor Tuning";
+    recordCustomAngles(`P${idx}->${val}°`, 2000);
     
-    // 【核心修改点 2】：手动调整、按键触发等离散突变模式，继续完美调用贝塞尔时间切片，滑块全面复活！
-    startAngles = [...currentAngles];
-    targetAngles = [...currentAngles];
-    targetAngles[idx] = val;
-    
-    if(isMacroRecording) {
-        let now = Date.now();
-        let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-        rehabMacroSequence.push({ isCustomAngles: true, angles: [...targetAngles], label: `P${idx}➔${val}°`, delayAfter: 2000 });
-        lastActionTime = now;
-        document.getElementById("macroIndicator").textContent = `Captured Slide Frame! (${rehabMacroSequence.length} actions recorded)`;
+    sendTargetAnglesToHardware(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4], { priority: true });
+}
+
+function triggerDirect(action) {
+    if(isVideoTracking) stopCamera();
+    activateWebControlMode();
+    let keyStr = String(action).trim();
+    if (POSES_DICTIONARY[keyStr]) {
+        stopAnyRunningSequence();
+        if(isMacroRecording) recordPoseKey(keyStr, 2000);
+        executeHardwarePipeline(keyStr);
+        startAutoResetCountdown();
     }
-    
-    bezierStartTime = performance.now();
-    if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
-    bezierAnimationStep();
 }
 
-function switchSTTLanguage(lang) {
-    currentSTTLanguage = lang;
-    document.getElementById("lbl-zh").classList.toggle("active-lang", lang === "zh-CN");
-    document.getElementById("lbl-en").classList.toggle("active-lang", lang === "en-US");
+function sendTargetAnglesToHardware(p0, p1, p2, p3, p4, options = {}) {
+    const payload = {
+        p0: Math.max(0, Math.min(180, Math.round(p0))),
+        p1: Math.max(0, Math.min(180, Math.round(p1))),
+        p2: Math.max(0, Math.min(180, Math.round(p2))),
+        p3: Math.max(0, Math.min(180, Math.round(p3))),
+        p4: Math.max(0, Math.min(180, Math.round(p4)))
+    };
+    return enqueueHardwareWrite(payload, "TargetAngles", options);
 }
 
-function startAutoResetCountdown() {
-    if(autoResetTimeout) clearTimeout(autoResetTimeout);
-    if(countdownInterval) clearInterval(countdownInterval);
-    secondsRemaining = 10;
-    const countdownEl = document.getElementById("countdownDisplay");
-    countdownInterval = setInterval(() => {
-        secondsRemaining--;
-        if(secondsRemaining <= 0) { clearInterval(countdownInterval); countdownEl.textContent = "🔄 Auto-reset executed"; }
-        else { countdownEl.textContent = `⏱️ Auto-reset countdown: ${secondsRemaining}s`; }
-    }, 1000);
-    autoResetTimeout = setTimeout(() => { executeHardwarePipeline("5"); }, 10400); 
+function sendSpeedFactorToHardware() {
+    const factor = parseFloat(document.getElementById("slideDuration").value) || 0.15;
+    enqueueHardwareWrite({ speed: factor }, "SpeedFactor");
 }
 
-function clearAllTimers() {
-    if(autoResetTimeout) clearTimeout(autoResetTimeout);
-    if(countdownInterval) clearInterval(countdownInterval);
-    document.getElementById("countdownDisplay").textContent = "";
+async function initSerialPort() {
+    try {
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 115200 });
+        const textEncoder = new TextEncoderStream();
+        serialWritableClosed = textEncoder.readable.pipeTo(serialPort.writable);
+        serialWriter = textEncoder.writable.getWriter();
+        document.getElementById("serialBtn").classList.add("connected");
+        setStatus("Serial Link Connected.");
+        sendSpeedFactorToHardware();
+    } catch (err) { setStatus("Serial failure: " + err.message); }
 }
 
-function toggleMacroRecording() {
-    const btn = document.getElementById("macroRecordBtn");
-    const indicator = document.getElementById("macroIndicator");
-    if(!isMacroRecording) {
-        stopAnyRunningSequence(); isMacroRecording = true; rehabMacroSequence = []; lastActionTime = Date.now();
-        btn.textContent = "🛑 Stop & Save / 停止并保存"; btn.style.background = "#ff3b3b";
-        indicator.textContent = isVideoTracking ? "Streaming Mocap... Wave your hands!" : "Recording... Press buttons or drag sliders below";
-    } else {
-        isMacroRecording = false; btn.textContent = "🔴 Start Recording / 开始录制"; btn.style.background = "#f0883b";
-        if(rehabMacroSequence.length > 0) {
-            let customName = prompt("Name this sequence:", `Sequence-${Object.keys(globalSequenceLibrary).length + 1}`);
-            if (customName && customName.trim() !== "") {
-                let uniqueId = "seq_" + Math.random().toString(36).substr(2, 9);
-                globalSequenceLibrary[uniqueId] = { name: customName.trim(), actions: [...rehabMacroSequence] };
-                renderSequenceLibraryUI();
-                indicator.textContent = "Sequence Saved successfully!";
-            }
-        } else { indicator.textContent = "Recording cancelled or empty."; }
+async function disconnectSerial() {
+    try {
+        if (serialWriter) {
+            await serialWriter.close();
+            serialWriter.releaseLock();
+            serialWriter = null;
+        }
+        if (serialWritableClosed) {
+            await serialWritableClosed.catch(() => {});
+            serialWritableClosed = null;
+        }
+        if (serialPort) {
+            await serialPort.close();
+            serialPort = null;
+        }
+        document.getElementById("serialBtn").classList.remove("connected");
+        setStatus("Serial Link Disconnected.");
+    } catch (err) { setStatus("Serial disconnect failure: " + err.message); }
+}
+
+async function initBLE() {
+    try {
+        bleDevice = await navigator.bluetooth.requestDevice({ filters: [{ name: "RoboticHand" }], optionalServices: [BLE_SERVICE_UUID] });
+        bleServer = await bleDevice.gatt.connect();
+        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+        bleCharacteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+        document.getElementById("bleBtn").classList.add("connected");
+        setStatus("BLE Link Connected.");
+        sendSpeedFactorToHardware();
+    } catch(err){ setStatus("BLE failure: " + err.message); }
+}
+
+function disconnectBLE() {
+    try {
+        if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+        bleCharacteristic = null;
+        bleServer = null;
+        bleDevice = null;
+        document.getElementById("bleBtn").classList.remove("connected");
+        setStatus("BLE Link Disconnected.");
+    } catch(err){ setStatus("BLE disconnect failure: " + err.message); }
+}
+
+function recordPoseKey(key, delayAfter = 2000) {
+    if (!isMacroRecording) return;
+    let now = Date.now(), diff = now - lastActionTime;
+    if (rehabMacroSequence.length > 0) rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
+    rehabMacroSequence.push({ key, delayAfter });
+    lastActionTime = now;
+    document.getElementById("macroIndicator").textContent = `Recording... (${rehabMacroSequence.length} actions)`;
+}
+
+function recordCustomAngles(label, delayAfter = 2000, streaming = false) {
+    if (!isMacroRecording) return;
+    let now = Date.now(), diff = now - lastActionTime;
+    if (streaming) delayAfter = Math.max(delayAfter, RECORD_STREAM_INTERVAL_MS);
+    if (streaming && diff < delayAfter) return;
+    if (rehabMacroSequence.length > 0) {
+        const minDelay = streaming ? RECORD_STREAM_INTERVAL_MS : 25;
+        rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = Math.max(diff, minDelay);
     }
+    rehabMacroSequence.push({ isCustomAngles: true, angles: [...currentAngles], label, delayAfter });
+    lastActionTime = now;
+    document.getElementById("macroIndicator").textContent = streaming
+        ? `Streaming... (${rehabMacroSequence.length} frames recorded)`
+        : `Recording... (${rehabMacroSequence.length} actions)`;
+}
+
+function anglesMaxDelta(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return Infinity;
+    let maxDelta = 0;
+    for (let i = 0; i < 5; i++) {
+        maxDelta = Math.max(maxDelta, Math.abs((Number(a[i]) || 0) - (Number(b[i]) || 0)));
+    }
+    return maxDelta;
+}
+
+function optimizeRecordedSequence(actions) {
+    const optimized = [];
+    actions.forEach(action => {
+        const last = optimized[optimized.length - 1];
+        const isStreamFrame = action.isCustomAngles && /Stream/i.test(action.label || "");
+        const lastIsStreamFrame = last && last.isCustomAngles && /Stream/i.test(last.label || "");
+        if (isStreamFrame && lastIsStreamFrame && anglesMaxDelta(action.angles, last.angles) < RECORD_COMPACT_ANGLE_DELTA) {
+            last.delayAfter = Math.max((last.delayAfter || RECORD_STREAM_INTERVAL_MS) + (action.delayAfter || RECORD_STREAM_INTERVAL_MS), RECORD_STREAM_INTERVAL_MS);
+            return;
+        }
+        optimized.push({ ...action });
+    });
+    return optimized;
 }
 
 function renderSequenceLibraryUI() {
     const container = document.getElementById("sequenceLibraryContainer");
-    let htmlPool = "";
     if(Object.keys(globalSequenceLibrary).length === 0) {
-        container.innerHTML = `<div style="font-size:13px; color:#8b949e; text-align:center; padding:10px;">No saved sequences / 暂无保存动作序列</div>`;
+        container.innerHTML = `<div style="font-size:13px; color:#8b949e; text-align:center; padding:10px;">No saved sequences</div>`;
         return;
     }
+    let htmlPool = "";
     Object.keys(globalSequenceLibrary).forEach(id => {
         let seqData = globalSequenceLibrary[id];
-        let flowChain = seqData.actions.map(item => item.isCustomAngles ? `[${item.label}]` : (EM_DISPLAY[item.key] || item.key)).join(" ➔ ");
-        if(flowChain.length > 60) flowChain = flowChain.substring(0, 57) + "... (High-speed Stream)";
+        let flowChain = seqData.actions.map(item => item.isCustomAngles ? `[${item.label}]` : (EM_DISPLAY[item.key] || item.key)).join(" -> ");
+        if(flowChain.length > 60) flowChain = flowChain.substring(0, 57) + "...";
         let isRunning = (activeRunningId === id);
         let buttonsHtml = isRunning ? `
             <button class="pause-seq-btn ${isLibraryPaused ? 'btn-is-paused' : ''}" onclick="handleControlClick('${id}', 'pause')">${isLibraryPaused ? '▶️ Resume' : '⏸️ Pause'}</button>
@@ -621,177 +988,209 @@ function renderSequenceLibraryUI() {
     container.innerHTML = htmlPool;
 }
 
-function handleControlClick(id, actionType) {
-    if (actionType === 'stop') { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); setStatus("Sequence Stopped."); return; }
-    if (actionType === 'pause') { isLibraryPaused = !isLibraryPaused; renderSequenceLibraryUI(); if(!isLibraryPaused) { executeSequenceStep(id, currentStepIndexMap[id]); } return; }
-    if (actionType === 'run') { if(isVideoTracking) stopCamera(); stopAnyRunningSequence(); activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; renderSequenceLibraryUI(); executeSequenceStep(id, 0); }
-}
-
-function executeSequenceStep(id, stepIndex) {
-    if (activeRunningId !== id || isLibraryPaused) return;
-    let seq = globalSequenceLibrary[id].actions;
-    if (stepIndex >= seq.length) stepIndex = 0; 
-    currentStepIndexMap[id] = stepIndex;
-    let currentStep = seq[stepIndex];
-    
-    if(currentStep.isCustomAngles) {
-        document.getElementById("hugeDisplay").textContent = "⚙️"; 
-        document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
-        
-        if (currentStep.label === "Mocap Stream") {
-            currentAngles = [...currentStep.angles];
-            for(let i=0; i<5; i++) {
-                document.getElementById(`slideM${i}`).value = currentAngles[i];
-                document.getElementById(`lblM${i}`).textContent = currentAngles[i] + "°";
-            }
-            sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-        } else {
-            startAngles = [...currentAngles]; 
-            targetAngles = [...currentStep.angles]; 
-            bezierStartTime = performance.now();
-            if (bezierTimeoutId) clearTimeout(bezierTimeoutId); 
-            bezierAnimationStep();
-        }
-    } else { 
-        executeHardwarePipeline(currentStep.key); 
+function toggleMacroRecording() {
+    const btn = document.getElementById("macroRecordBtn"), indicator = document.getElementById("macroIndicator");
+    if(!isMacroRecording) {
+        stopAnyRunningSequence();
+        isMacroRecording = true;
+        rehabMacroSequence = [];
+        lastActionTime = Date.now();
+        btn.textContent = "🛑 Stop & Save / 停止并保存";
+        btn.style.background = "#ff3b3b";
+        indicator.textContent = isVideoTracking ? "Recording camera motion..." : "Recording... Move sliders or press gestures";
+        return;
     }
-    
-    let nextIndex = (stepIndex + 1) % seq.length; 
-    let delayTime = currentStep.delayAfter || 2000; 
-    macroTimeoutId = setTimeout(() => { executeSequenceStep(id, nextIndex); }, delayTime);
+
+    isMacroRecording = false;
+    btn.textContent = "🔴 Start Recording / 开始录制";
+    btn.style.background = "#f0883b";
+    if(rehabMacroSequence.length > 0) {
+        const savedSequence = optimizeRecordedSequence(rehabMacroSequence);
+        let customName = prompt("Name this sequence:", `Sequence-${Object.keys(globalSequenceLibrary).length + 1}`);
+        if (customName && customName.trim() !== "") {
+            let uniqueId = "seq_" + Math.random().toString(36).slice(2, 11);
+            globalSequenceLibrary[uniqueId] = { name: customName.trim(), actions: savedSequence };
+            indicator.textContent = `Saved: ${customName.trim()} (${savedSequence.length}/${rehabMacroSequence.length} frames)`;
+            renderSequenceLibraryUI();
+        } else {
+            indicator.textContent = "Recording discarded.";
+        }
+    } else {
+        indicator.textContent = "No actions recorded.";
+    }
 }
 
-function stopAnyRunningSequence() { if(macroTimeoutId) { clearTimeout(macroTimeoutId); macroTimeoutId = null; } activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); }
-function deleteSequence(id) { if(activeRunningId === id) stopAnyRunningSequence(); delete globalSequenceLibrary[id]; delete currentStepIndexMap[id]; renderSequenceLibraryUI(); }
-
-async function initSerialPort() {
-    try {
-        if (!("serial" in navigator)) { alert("Web Serial not supported."); return; }
-        serialPort = await navigator.serial.requestPort();
-        await serialPort.open({ baudRate: 115200 });
-        const textEncoder = new TextEncoderStream();
-        serialWritableClosed = textEncoder.readable.pipeTo(serialPort.writable);
-        serialWriter = textEncoder.writable.getWriter();
-        document.getElementById("serialBtn").textContent = "✅ Serial";
-        document.getElementById("serialBtn").classList.add("connected");
-        updateStatusDot();
-        setStatus("Serial Connected.");
-    } catch (err) { setStatus("Failed: " + err.message); }
+function handleControlClick(id, actionType) {
+    if (actionType === 'stop') {
+        if(macroTimeoutId) clearTimeout(macroTimeoutId);
+        macroTimeoutId = null; activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); return;
+    }
+    if (actionType === 'pause') {
+        isLibraryPaused = !isLibraryPaused;
+        renderSequenceLibraryUI();
+        if(!isLibraryPaused) executeSequenceStep(id, currentStepIndexMap[id]);
+        return;
+    }
+    if (actionType === 'run') {
+        if(isVideoTracking) stopCamera();
+        activateWebControlMode();
+        stopAnyRunningSequence();
+        activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0;
+        renderSequenceLibraryUI();
+        executeSequenceStep(id, 0);
+    }
 }
 
-async function initBLE() {
-    try {
-        bleDevice = await navigator.bluetooth.requestDevice({
-            filters: [{ name: "RobotHand_BLE" }],
-            optionalServices: [BLE_SERVICE_UUID]
-        });
-        bleServer = await bleDevice.gatt.connect();
-        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
-        bleCharacteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
-        const bleBtn = document.getElementById("bleBtn");
-        bleBtn.textContent = "✅ BLE";
-        bleBtn.classList.add("connected");
-        updateStatusDot();
-        setStatus("BLE connected successfully.");
-    } catch(err){ setStatus("BLE connect failed: " + err.message); }
+async function executeSequenceStep(id, stepIndex) {
+    if (activeRunningId !== id || isLibraryPaused) return;
+    const seq = globalSequenceLibrary[id]?.actions || [];
+    if (!seq.length) return;
+    if (stepIndex >= seq.length) stepIndex = 0;
+    currentStepIndexMap[id] = stepIndex;
+    const currentStep = seq[stepIndex];
+    const stepStartedAt = performance.now();
+    if(currentStep.isCustomAngles) {
+        document.getElementById("hugeDisplay").textContent = "⚙️";
+        document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
+        currentAngles = currentStep.angles.map(value => Math.max(0, Math.min(180, Math.round(Number(value) || 0))));
+        syncSlidersUIOnly();
+        await sendTargetAnglesToHardware(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4], { priority: true });
+    } else {
+        await executeHardwarePipeline(currentStep.key);
+    }
+    if (activeRunningId !== id || isLibraryPaused) return;
+    const elapsed = performance.now() - stepStartedAt;
+    const recordedDelay = Math.max(Number(currentStep.delayAfter) || 2000, PLAYBACK_MIN_DELAY_MS);
+    const nextDelay = Math.max(recordedDelay - elapsed, 0);
+    macroTimeoutId = setTimeout(() => executeSequenceStep(id, (stepIndex + 1) % seq.length), nextDelay);
 }
 
-async function disconnectBLE() {
-    try {
-        if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
-        bleDevice = null; bleServer = null; bleCharacteristic = null;
-        const bleBtn = document.getElementById("bleBtn");
-        bleBtn.textContent = "🔵 BLE";
-        bleBtn.classList.remove("connected");
-        updateStatusDot();
-        setStatus("BLE disconnected.");
-    } catch (err) { setStatus("BLE disconnect failed: " + err.message); }
+function stopAnyRunningSequence() {
+    if(macroTimeoutId) clearTimeout(macroTimeoutId);
+    macroTimeoutId = null;
+    activeRunningId = null;
+    isLibraryPaused = false;
+    renderSequenceLibraryUI();
 }
 
-async function disconnectSerial() {
-    try {
-        if (serialWriter) { await serialWriter.close(); await serialWritableClosed; serialWriter = null; serialWritableClosed = null; }
-        if (serialPort) { await serialPort.close(); serialPort = null; }
-        document.getElementById("serialBtn").textContent = "🔌 Serial";
-        document.getElementById("serialBtn").classList.remove("connected");
-        updateStatusDot();
-        setStatus("Type-C disconnected.");
-    } catch (err) { setStatus("Type-C disconnect failed: " + err.message); }
+function deleteSequence(id) {
+    if(activeRunningId === id) stopAnyRunningSequence();
+    delete globalSequenceLibrary[id];
+    renderSequenceLibraryUI();
 }
-
-function setStatus(msg){ document.getElementById("status").textContent = msg; }
 
 function executeHardwarePipeline(actionKey) {
     let keyStr = String(actionKey).trim();
-    if (POSES_DICTIONARY[keyStr]) {
-        document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
-        document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
-        startAngles = [...currentAngles];
-        targetAngles = [...POSES_DICTIONARY[keyStr]];
-        bezierStartTime = performance.now();
-        if (bezierTimeoutId) clearTimeout(bezierTimeoutId);
-        bezierAnimationStep();
-    }
+    if (!POSES_DICTIONARY[keyStr]) return;
+    activateWebControlMode();
+    document.getElementById("hugeDisplay").textContent = EM_DISPLAY[keyStr] || keyStr;
+    document.getElementById("poseTextDisplay").textContent = EM_TEXT_DISPLAY[keyStr] || "";
+    currentAngles = [...POSES_DICTIONARY[keyStr]];
+    syncSlidersUIOnly();
+    return sendTargetAnglesToHardware(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4], { priority: true });
 }
 
-// 【核心修改点 3】：移除彻底阻断蓝牙分包的过早 return 逻辑！让贝塞尔计算结果（每一步的细小切片）在滑块控制下可以安全平滑地同时通过串口和蓝牙无差别稳定投送！
-function bezierAnimationStep() {
-    let now = performance.now();
-    let totalDuration = parseInt(document.getElementById("slideDuration").value);
-    let stepDelay = parseInt(document.getElementById("slideStepDelay").value);
-    
-    let elapsed = now - bezierStartTime;
-    let t = Math.min(elapsed / totalDuration, 1);
-    let p = t * t * (3 - 2 * t); 
-    
-    for (let i = 0; i < 5; i++) {
-        currentAngles[i] = Math.round(startAngles[i] + (targetAngles[i] - startAngles[i]) * p);
-    }
-    
-    syncSlidersFromCurrentAngles();
-    
-    // 所有的计算切片数据通过统一接口安全、平缓下发
-    sendAnglesToESP32(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4]);
-    
-    if (t < 1) { 
-        bezierTimeoutId = setTimeout(bezierAnimationStep, stepDelay); 
-    } else { 
-        bezierTimeoutId = null; 
-    }
+function startAutoResetCountdown() {
+    if(autoResetTimeout) clearTimeout(autoResetTimeout);
+    if(countdownInterval) clearInterval(countdownInterval);
+    secondsRemaining = 10;
+    const countdownEl = document.getElementById("countdownDisplay");
+    countdownInterval = setInterval(() => {
+        secondsRemaining--;
+        if(secondsRemaining <= 0) {
+            clearInterval(countdownInterval);
+            countdownEl.textContent = "Auto-reset executed";
+        } else {
+            countdownEl.textContent = `Auto-reset countdown: ${secondsRemaining}s`;
+        }
+    }, 1000);
+    autoResetTimeout = setTimeout(() => executeHardwarePipeline("5"), 10400);
 }
 
-function triggerDirect(action) {
-    if(isVideoTracking) stopCamera();
-    let keyStr = String(action).trim();
-    if(isMacroRecording) { 
-        let now = Date.now(); let diff = now - lastActionTime;
-        if (rehabMacroSequence.length > 0) { rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff; }
-        rehabMacroSequence.push({ key: keyStr, delayAfter: 2000 }); lastActionTime = now;
-    }
-    executeHardwarePipeline(keyStr); startAutoResetCountdown(); 
+async function emergencyStop() {
+    stopCamera();
+    stopDepthSync({ notifyGateway: true, silent: true });
+    activateWebControlMode();
+    stopAnyRunningSequence();
+    clearAllTimers();
+    clearStreamingCommandBuffers();
+    currentAngles = [0,0,0,0,0]; syncSlidersUIOnly();
+    document.getElementById("hugeDisplay").textContent = "🛑";
+    enqueueHardwareWrite({ command: "reset" }, "RESET", { priority: true });
+    setStatus("Reset signal fired.");
+}
+
+function toggleDropdown(id) { const menu = document.querySelector('#' + id + ' .dropdown-menu'); menu.classList.toggle('show'); }
+function closeAllDropdowns() { document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show')); }
+function clearAllTimers() {
+    if(autoResetTimeout) clearTimeout(autoResetTimeout);
+    if(countdownInterval) clearInterval(countdownInterval);
+    autoResetTimeout = null;
+    countdownInterval = null;
+    document.getElementById("countdownDisplay").textContent = "";
+}
+function switchSTTLanguage(lang) {
+    currentSTTLanguage = lang;
+    document.getElementById("lbl-zh").classList.toggle("active-lang", lang === "zh-CN");
+    document.getElementById("lbl-en").classList.toggle("active-lang", lang === "en-US");
+}
+function toggleVoiceAssistant() {
+    voiceEnabled = document.getElementById('voiceToggle').checked;
+    document.getElementById('voiceStatus').textContent = voiceEnabled ? 'ON' : 'OFF';
+    document.getElementById('voiceStatus').style.color = voiceEnabled ? '#39ff14' : '#8b949e';
 }
 
 function sendTextMessage() {
     if(isVideoTracking) stopCamera();
-    stopAnyRunningSequence(); let txt = document.getElementById("textInput").value.trim(); if(!txt) return;
-    clearAllTimers(); document.getElementById("speechText").textContent = `"${txt}"`; setStatus("AI thinking...");
-    askLLM(txt); document.getElementById("textInput").value = "";
+    stopAnyRunningSequence();
+    const txt = document.getElementById("textInput").value.trim();
+    if(!txt) return;
+    clearAllTimers();
+    document.getElementById("speechText").textContent = `"${txt}"`;
+    setStatus("AI thinking...");
+    askLLM(txt);
+    document.getElementById("textInput").value = "";
 }
 
 function initRecognition(){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition(); recognition.lang = currentSTTLanguage; recognition.interimResults = true; recognition.continuous = true; finalTranscript = "";
-    recognition.onstart = () => { isRecording = true; document.getElementById("recordBtn").classList.add("recording"); };
+    if (!SpeechRecognition) {
+        setStatus("SpeechRecognition is not supported in this browser.");
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.lang = currentSTTLanguage;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    finalTranscript = "";
+    recognition.onstart = () => { isRecording = true; document.getElementById("recordBtn").classList.add("recording"); setStatus("Listening..."); };
     recognition.onresult = (event) => {
         let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " "; else interimTranscript += event.results[i][0].transcript; }
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + " ";
+            else interimTranscript += event.results[i][0].transcript;
+        }
         document.getElementById("speechText").textContent = `"${finalTranscript + interimTranscript}"`;
     };
-    recognition.onend = () => { document.getElementById("recordBtn").classList.remove("recording"); if(!isRecording && finalTranscript.trim() !== "") { setStatus("AI thinking..."); askLLM(finalTranscript.trim(), currentSTTLanguage); } };
+    recognition.onend = () => {
+        document.getElementById("recordBtn").classList.remove("recording");
+        if(!isRecording && finalTranscript.trim() !== "") askLLM(finalTranscript.trim(), currentSTTLanguage);
+    };
 }
 
-document.getElementById("recordBtn").addEventListener("click", () => { if(isVideoTracking) stopCamera(); stopAnyRunningSequence(); if (isRecording) { isRecording = false; recognition.stop(); return; } clearAllTimers(); initRecognition(); try { recognition.start(); } catch(e){} });
-function emergencyStop() { stopCamera(); stopAnyRunningSequence(); clearAllTimers(); if(bezierTimeoutId) clearTimeout(bezierTimeoutId); document.getElementById("hugeDisplay").textContent = "🛑"; currentAngles = [0,0,0,0,0]; syncSlidersFromCurrentAngles(); sendAnglesToESP32(0, 0, 0, 0, 0); }
+document.getElementById("recordBtn").addEventListener("click", async () => {
+    if(isVideoTracking) stopCamera();
+    stopAnyRunningSequence();
+    if (isRecording) {
+        isRecording = false;
+        if (recognition) recognition.stop();
+        return;
+    }
+    clearAllTimers();
+    finalTranscript = "";
+    initRecognition();
+    try { if (recognition) recognition.start(); } catch(e) { setStatus("Speech start failed: " + e.message); }
+});
 
 async function callCloudLLM(userText, systemPrompt) {
     const response = await fetch("/api/chat", {
@@ -803,18 +1202,14 @@ async function callCloudLLM(userText, systemPrompt) {
             messages:[{ role:"system", content:systemPrompt },{ role:"user", content:userText }]
         })
     });
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || "";
+    return (await response.json()).choices?.[0]?.message?.content || "";
 }
 
 async function callLocalLLM(userText, systemPrompt) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
             body: JSON.stringify({
                 model: OLLAMA_MODEL,
                 messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userText }],
@@ -823,407 +1218,123 @@ async function callLocalLLM(userText, systemPrompt) {
         });
         const data = await response.json();
         return data.message?.content || data.response || "";
-    } finally {
-        clearTimeout(timeoutId);
-    }
+    } catch(e){ return ""; }
 }
 
 function handleShowResult(result, lang) {
     const resultText = String(result).trim();
     const reply = lang === 'zh-CN' ? `答案是${resultText}。` : `The answer is ${resultText}.`;
     document.getElementById("speechText").textContent = `"${reply}"`;
-    speakReply(reply, lang);
     document.getElementById("hugeDisplay").textContent = resultText;
     document.getElementById("poseTextDisplay").textContent = "Math Result";
+    speakReply(reply, lang);
     if (/^[0-6]$/.test(resultText) && POSES_DICTIONARY[resultText]) {
         executeHardwarePipeline(resultText);
-        document.getElementById("hugeDisplay").textContent = resultText;
-        document.getElementById("poseTextDisplay").textContent = "Math Result";
         startAutoResetCountdown();
     }
-    setStatus(lang === 'zh-CN' ? "计算完成。" : "Calculation complete.");
 }
 
 function executeRPSRound(lang) {
-    const rpsOptions = ["0", "2", "5"]; // rock, scissors, paper
-    const pick = rpsOptions[Math.floor(Math.random() * rpsOptions.length)];
-    const names = {
-        "0": lang === 'zh-CN' ? "石头" : "rock",
-        "2": lang === 'zh-CN' ? "剪刀" : "scissors",
-        "5": lang === 'zh-CN' ? "布" : "paper"
-    };
+    const pick = ["0", "2", "5"][Math.floor(Math.random() * 3)];
+    const names = { "0": lang === 'zh-CN' ? "石头" : "rock", "2": lang === 'zh-CN' ? "剪刀" : "scissors", "5": lang === 'zh-CN' ? "布" : "paper" };
     const reply = lang === 'zh-CN' ? `我出${names[pick]}。` : `I choose ${names[pick]}.`;
     document.getElementById("speechText").textContent = `"${reply}"`;
     speakReply(reply, lang);
     executeHardwarePipeline(pick);
-    setStatus((lang === 'zh-CN' ? "石头剪刀布: " : "Rock-paper-scissors: ") + names[pick]);
     startAutoResetCountdown();
 }
 
-async function askLLM(userText, forcedLang = null){    
+async function askLLM(userText, forcedLang = null){
     const promptLang = forcedLang || RobotHandRules.detectUserLanguage(userText);
-    const rpsOptions = ["0", "2", "5"];
-    const rpsAns = rpsOptions[Math.floor(Math.random() * rpsOptions.length)];
-    const isMathLike = RobotHandRules.isLikelyMathQuestion(userText);
-    const isRPSRequest = RobotHandRules.detectRPSIntent(userText);
-    const directGesture = (!isMathLike && !isRPSRequest && RobotHandRules.detectDirectGestureIntent)
-        ? RobotHandRules.detectDirectGestureIntent(userText, promptLang)
-        : null;
-    const semanticIntent = (!isMathLike && !isRPSRequest && !directGesture)
-        ? RobotHandRules.detectSemanticIntent(userText)
-        : null;
-
-    function speakTextOnly(text, statusText) {
-        const clean = RobotHandRules.enforceReplyLanguage(text || RobotHandRules.replyForIntent('neutral', promptLang), promptLang, null);
-        document.getElementById("speechText").textContent = `"${clean}"`;
-        speakReply(clean, promptLang);
-        setStatus(statusText);
-    }
-
-    function runSemanticIntent(intent, statusText) {
-        const finalAns = RobotHandRules.gestureForIntent(intent);
-        const intentReply = RobotHandRules.replyForIntent(intent, promptLang);
-        document.getElementById("speechText").textContent = `"${intentReply}"`;
-        speakReply(intentReply, promptLang);
-        if (finalAns && POSES_DICTIONARY[finalAns]) {
-            executeHardwarePipeline(finalAns);
-            startAutoResetCountdown();
-        }
-        setStatus(statusText || ("Semantic intent: " + intent + "."));
-    }
-
-    function blockInvalidModelAction(statusText) {
-        if (semanticIntent) {
-            runSemanticIntent(semanticIntent, statusText);
-        } else {
-            speakTextOnly(RobotHandRules.replyForIntent('neutral', promptLang), statusText);
-        }
-    }
-
     const mathResult = RobotHandRules.tryEvaluateMathQuestion(userText);
-    if (mathResult !== null) {
-        handleShowResult(mathResult, promptLang);
-        return;
-    }
-    if (isRPSRequest) {
-        executeRPSRound(promptLang);
-        return;
-    }
-    const localGesture = isMathLike ? null : RobotHandRules.detectLocalGestureIntent(userText, promptLang);
+    if (mathResult !== null) { handleShowResult(mathResult, promptLang); return; }
+    if (RobotHandRules.detectRPSIntent(userText)) { executeRPSRound(promptLang); return; }
+    const localGesture = RobotHandRules.detectLocalGestureIntent(userText, promptLang);
     if (localGesture) {
         document.getElementById("speechText").textContent = `"${localGesture.reply}"`;
         speakReply(localGesture.reply, promptLang);
         executeHardwarePipeline(localGesture.ans);
-        setStatus("Local intent synchronized.");
         startAutoResetCountdown();
         return;
     }
 
-    const systemPrompt = await RobotHandRules.loadSystemPrompt(promptLang);
     try{
-        const promptText = `User command: ${userText}\nForced RPS answer: {"ans":"${rpsAns}"}`;
-        let aiResponseRaw;
-        if (currentModelSource === 'local') {
-            aiResponseRaw = await callLocalLLM(promptText, systemPrompt);
-        } else {
-            try {
-                aiResponseRaw = await callCloudLLM(promptText, systemPrompt);
-            } catch (cloudErr) {
-                if (ollamaAvailable) {
-                    setStatus("Cloud unreachable. Falling back to Local model...");
-                    aiResponseRaw = await callLocalLLM(promptText, systemPrompt);
-                } else {
-                    throw cloudErr;
-                }
-            }
-        }
-        const aiResponse = RobotHandRules.extractFirstJSON(aiResponseRaw);
-        if (!aiResponse) {
-            if (isRPSRequest) {
-                executeRPSRound(promptLang);
-                return;
-            }
-            const replyMathResult = RobotHandRules.extractMathResultFromReply(aiResponseRaw);
-            if (isMathLike && replyMathResult !== null) {
-                handleShowResult(replyMathResult, promptLang);
-                return;
-            }
-
-            const plainReply = RobotHandRules.enforceReplyLanguage(aiResponseRaw.replace(/```/g, '').trim(), promptLang, null);
-            document.getElementById("speechText").textContent = `"${plainReply}"`;
-            speakReply(plainReply, promptLang);
-            const fallbackGesture = RobotHandRules.detectLocalGestureIntent(userText, promptLang);
-            if (fallbackGesture) {
-                executeHardwarePipeline(fallbackGesture.ans);
-                setStatus("Recovered fallback gesture " + fallbackGesture.ans + ".");
-                startAutoResetCountdown();
-            } else {
-                setStatus("AI replied (no action).");
-            }
-            return;
-        }
-
-        let parsed = JSON.parse(aiResponse);
-        if (Array.isArray(parsed)) parsed = parsed[0] || {};
-        if (!parsed || typeof parsed !== 'object') throw new Error('No valid AI JSON');
-
-        const reply = RobotHandRules.enforceReplyLanguage(parsed.reply || '', promptLang, parsed);
-
-        if (isRPSRequest) {
-            executeRPSRound(promptLang);
-            return;
-        }
-
-        const replyMathResult = RobotHandRules.extractMathResultFromReply(reply);
-        if (parsed.mode !== "show_result" && isMathLike && replyMathResult !== null) {
-            handleShowResult(replyMathResult, promptLang);
-            return;
-        }
-
-        if(parsed.mode === "show_result"){
-            if (!isMathLike) {
-                blockInvalidModelAction("Blocked invalid math result.");
-                return;
-            }
-            handleShowResult(parsed.result, promptLang);
-            return;
-        }
-        if(parsed.mode === "intent" || parsed.hasOwnProperty('intent')){
-            const intent = String(parsed.intent || '').trim();
-            const finalAns = RobotHandRules.gestureForIntent(intent);
-            const intentReply = RobotHandRules.enforceReplyLanguage(parsed.reply || RobotHandRules.replyForIntent(intent, promptLang), promptLang, null);
-            document.getElementById("speechText").textContent = `"${intentReply}"`;
-            speakReply(intentReply, promptLang);
-            if (finalAns && POSES_DICTIONARY[finalAns]) {
-                executeHardwarePipeline(finalAns);
-                startAutoResetCountdown();
-            }
-            setStatus("AI semantic intent: " + intent + ".");
-            return;
-        }
-
-        if(parsed.mode === "rps"){
-            blockInvalidModelAction("Blocked invalid RPS action.");
-            return;
-        }
-        if (reply && parsed.mode !== "custom_sequence" && !parsed.hasOwnProperty('ans')) {
-            document.getElementById("speechText").textContent = `"${reply}"`;
-            speakReply(reply, promptLang);
-        }
-        if(parsed.mode === "custom_sequence" && Array.isArray(parsed.actions)) {
+        const systemPrompt = await RobotHandRules.loadSystemPrompt(promptLang);
+        const aiResponseRaw = currentModelSource === 'local'
+            ? await callLocalLLM(userText, systemPrompt)
+            : await callCloudLLM(userText, systemPrompt);
+        const parsed = JSON.parse(RobotHandRules.extractFirstJSON(aiResponseRaw) || "{}");
+        if (parsed.mode === "custom_sequence" && Array.isArray(parsed.actions)) {
             stopAnyRunningSequence();
             clearAllTimers();
-            let seqId = "ai_custom_" + Date.now();
+            const seqId = "ai_custom_" + Date.now();
             globalSequenceLibrary[seqId] = {
                 name: "AI Generated Motion",
-                actions: parsed.actions.map((item, idx) => {
-                    let angles;
-                    let label;
-                    if (item.hasOwnProperty('ans') && POSES_DICTIONARY[String(item.ans).trim()]) {
-                        const key = String(item.ans).trim();
-                        angles = [...POSES_DICTIONARY[key]];
-                        label = (EM_DISPLAY[key] || key) + " Step " + (idx + 1);
-                    } else if (Array.isArray(item.angles)) {
-                        angles = item.angles.map(v => Math.max(0, Math.min(180, parseInt(v) || 0)));
-                        label = "AI Motion Step " + (idx + 1);
-                    } else {
-                        return null;
-                    }
-                    return { isCustomAngles: true, angles, label, delayAfter: item.delay || 800 };
-                }).filter(Boolean)
+                actions: parsed.actions.map(item => ({
+                    isCustomAngles: true,
+                    angles: Array.isArray(item.angles) ? item.angles : [0,0,0,0,0],
+                    label: "AI Step",
+                    delayAfter: item.delay || 800
+                }))
             };
-            if (globalSequenceLibrary[seqId].actions.length === 0) {
-                setStatus("AI sequence had no valid actions.");
-                return;
-            }
             activeRunningId = seqId;
-            isLibraryPaused = false;
             currentStepIndexMap[seqId] = 0;
             renderSequenceLibraryUI();
             executeSequenceStep(seqId, 0);
-            setStatus("AI custom motion running.");
             return;
         }
-        if(parsed.hasOwnProperty('ans')) { 
-            if (isMathLike) {
-                const replyMathResult = RobotHandRules.extractMathResultFromReply(reply);
-                if (replyMathResult !== null) {
-                    handleShowResult(replyMathResult, promptLang);
-                } else {
-                    setStatus("Math-like question blocked gesture action.");
-                }
-                return;
-            }
-            if (!directGesture) {
-                blockInvalidModelAction("Blocked invalid gesture action.");
-                return;
-            }
-            let finalAns = directGesture.ans;
-            if (!POSES_DICTIONARY[finalAns]) {
-                setStatus("AI returned an invalid gesture.");
-                return;
-            }
-            const actionReply = directGesture.reply || reply;
-            if (actionReply) {
-                document.getElementById("speechText").textContent = `"${actionReply}"`;
-                speakReply(actionReply, promptLang);
-            }
-            if(isMacroRecording) {
-                let now = Date.now();
-                let diff = now - lastActionTime;
-                if (rehabMacroSequence.length > 0) rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = diff;
-                rehabMacroSequence.push({ key: finalAns, delayAfter: 2000 });
-                lastActionTime = now;
-            }
-            executeHardwarePipeline(finalAns);
-            setStatus("AI intent synchronized.");
-            startAutoResetCountdown(); 
-            return;
-        }
-        if (reply) {
-            document.getElementById("speechText").textContent = `"${reply}"`;
-            speakReply(reply, promptLang);
-        }
-        setStatus("AI replied (no action).");
-    }catch(err){
-        const fallbackGesture = isMathLike ? null : RobotHandRules.detectLocalGestureIntent(userText, promptLang);
-        if (fallbackGesture) {
-            document.getElementById("speechText").textContent = `"${fallbackGesture.reply}"`;
-            speakReply(fallbackGesture.reply, promptLang);
-            executeHardwarePipeline(fallbackGesture.ans);
-            setStatus("Recovered local gesture after AI failure.");
+        if(parsed.mode === "show_result" && parsed.result !== undefined) { handleShowResult(parsed.result, promptLang); return; }
+        if(parsed.mode === "rps") { executeRPSRound(promptLang); return; }
+        if(parsed.hasOwnProperty('ans') && POSES_DICTIONARY[String(parsed.ans).trim()]) {
+            executeHardwarePipeline(String(parsed.ans).trim());
             startAutoResetCountdown();
-        } else {
-            setStatus("AI Engine analysis failed: " + err.message);
+            if (parsed.reply) {
+                document.getElementById("speechText").textContent = `"${parsed.reply}"`;
+                speakReply(parsed.reply, promptLang);
+            }
+            return;
         }
+        if (parsed.reply) {
+            document.getElementById("speechText").textContent = `"${parsed.reply}"`;
+            speakReply(parsed.reply, promptLang);
+        }
+        setStatus("AI ready.");
+    }catch(err){
+        console.warn(err);
+        setStatus("AI Engine error.");
     }
 }
-
-async function sendAnglesToESP32(p0, p1, p2, p3, p4) {
-    const payloadStr = JSON.stringify({ p0, p1, p2, p3, p4 });
-    try {
-        if (serialWriter) {
-            await serialWriter.write(payloadStr + "\n");
-            document.getElementById("jsonPreview").textContent = "🚀 Serial -> " + payloadStr;
-            return;
-        }
-        if (bleCharacteristic) {
-            if (bleWriteBusy) return;
-            bleWriteBusy = true; 
-            const encoder = new TextEncoder();
-            await bleCharacteristic.writeValue(encoder.encode(payloadStr));
-            bleWriteBusy = false;
-            document.getElementById("jsonPreview").textContent = "🔵 BLE Standard JSON -> " + payloadStr;
-            return;
-        }
-        setStatus("Please connect Type-C or BLE.");
-    } catch (err) { bleWriteBusy = false; setStatus("Send failed: " + err.message); }
-}
-
-function toggleDropdown(id) {
-    const menu = document.querySelector('#' + id + ' .dropdown-menu');
-    const wasOpen = menu.classList.contains('show');
-    closeAllDropdowns();
-    if (!wasOpen) menu.classList.add('show');
-}
-function closeAllDropdowns() {
-    document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
-}
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown')) closeAllDropdowns();
-});
-
-function updateStatusDot() {
-    const dot = document.getElementById('statusDot');
-    const serialBtn = document.getElementById('serialBtn');
-    const bleBtn = document.getElementById('bleBtn');
-    const hasSerial = serialBtn && serialBtn.classList.contains('connected');
-    const hasBLE = bleBtn && bleBtn.classList.contains('connected');
-    if (hasSerial || hasBLE) dot.classList.add('live');
-    else dot.classList.remove('live');
-}
-
-const _origSetStatus = setStatus;
-setStatus = function(msg) {
-    _origSetStatus(msg);
-    const info = document.getElementById('statusInfo');
-    if (info) info.textContent = new Date().toLocaleTimeString();
-};
 
 async function checkOllamaAvailability() {
-    const statusDot = document.getElementById('ollamaStatusDot');
-    const statusText = document.getElementById('ollamaStatusText');
-    statusDot.style.background = '#f0b429';
-    statusText.textContent = 'Probing...';
-    statusText.style.color = '#f0b429';
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const resp = await fetch(`${OLLAMA_BASE_URL}/api/tags`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!resp.ok) throw new Error('Ollama unavailable');
-        ollamaAvailable = true;
-        statusDot.style.background = '#39ff14';
-        statusText.textContent = 'Ready';
-        statusText.style.color = '#39ff14';
-        document.getElementById('btnLocalModel').disabled = false;
+        const resp = await fetch(`${OLLAMA_BASE_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
+        ollamaAvailable = resp.ok;
+        document.getElementById('ollamaStatusDot').style.background = resp.ok ? '#39ff14' : '#ff3b3b';
+        document.getElementById('ollamaStatusText').textContent = resp.ok ? 'Ready' : 'Unavailable';
+        document.getElementById('btnLocalModel').disabled = !resp.ok;
     } catch (e) {
-        ollamaAvailable = false;
-        statusDot.style.background = '#ff3b3b';
-        statusText.textContent = 'Unavailable';
-        statusText.style.color = '#ff3b3b';
+        document.getElementById('ollamaStatusDot').style.background = '#ff3b3b';
+        document.getElementById('ollamaStatusText').textContent = 'Unavailable';
         document.getElementById('btnLocalModel').disabled = true;
-        if (currentModelSource === 'local') switchModelSource('cloud');
     }
-    ollamaCheckComplete = true;
 }
 
 function switchModelSource(source) {
-    if (source === 'local' && !ollamaAvailable) {
-        setStatus('Local model is unavailable.');
-        return;
-    }
+    if (source === 'local' && document.getElementById('btnLocalModel').disabled) return;
     currentModelSource = source;
     document.getElementById('btnCloudModel').classList.toggle('model-active', source === 'cloud');
     document.getElementById('btnLocalModel').classList.toggle('model-active', source === 'local');
-    setStatus(source === 'cloud' ? 'Using Cloud model.' : 'Using Local Ollama model.');
 }
 
 function speakReply(text, langOverride = null) {
     if (!voiceEnabled || !text || !('speechSynthesis' in window)) return;
-    try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        const lang = langOverride || currentSTTLanguage || RobotHandRules.detectUserLanguage(text);
-        utterance.lang = lang;
-        utterance.rate = 0.95;
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            const prefix = lang.startsWith('zh') ? 'zh' : 'en';
-            utterance.voice = voices.find(v => v.lang.startsWith(prefix) && v.name.includes('Google')) ||
-                              voices.find(v => v.lang.startsWith(prefix)) ||
-                              voices[0];
-        }
-        window.speechSynthesis.speak(utterance);
-    } catch (err) {
-        console.warn('[TTS] Browser speechSynthesis failed:', err.message);
-    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = langOverride || "zh-CN";
+    window.speechSynthesis.speak(utterance);
 }
 
-function toggleVoiceAssistant() {
-    const checkbox = document.getElementById('voiceToggle');
-    voiceEnabled = checkbox.checked;
-    document.getElementById('voiceStatus').textContent = voiceEnabled ? 'ON' : 'OFF';
-    document.getElementById('voiceStatus').style.color = voiceEnabled ? '#39ff14' : '#8b949e';
-    if (!voiceEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
-}
-
-window.onload = () => {
-    renderSequenceLibraryUI();
-    syncSlidersFromCurrentAngles();
-    updateStatusDot();
-    checkOllamaAvailability();
-};
+window.onload = () => { renderSequenceLibraryUI(); syncSlidersUIOnly(); updateSliderLabels(); checkOllamaAvailability(); };
 </script>
 </body>
 </html>

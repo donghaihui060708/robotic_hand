@@ -154,5 +154,18 @@ https://github.com/donghaihui060708
 
 保留所有权利。
 
+<h1>9. Android 离线 AI</h1>
+
+Android App 使用 llama.cpp 在手机本地运行 Qwen2.5 1.5B Instruct Q4_K_M。模型不会打包进 APK；首次在 App 的 AI 页面下载约 1.12 GB，下载并加载后可断网推理。
+
+首次编译前运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-android-llm.ps1
+npm.cmd run android:sync
+```
+
+随后在 Android Studio 中构建并安装 App。网页版本仍使用原来的 Cloud/Ollama 接口，不受 Android 本地模型影响。
+
 
 

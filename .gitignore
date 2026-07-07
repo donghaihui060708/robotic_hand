@@ -1,0 +1,15 @@
+node_modules/
+third_party/llama.cpp/
+pyorbbecsdk/
+python-*.exe
+Log/
+__pycache__/
+*.pyc
+mobile/web-src/
+mobile/www/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+.gradle-project-cache/
+*.iml

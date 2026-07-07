@@ -160,5 +160,18 @@ This repository is published for educational and portfolio purposes.
 
 All rights reserved.
 
+<h1>9. Android Offline AI</h1>
+
+The Android app runs Qwen2.5 1.5B Instruct Q4_K_M locally through llama.cpp. The model is not bundled in the APK; download the approximately 1.12 GB model once from the app's AI screen, load it, and inference can then run offline.
+
+Before the first Android build, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-android-llm.ps1
+npm.cmd run android:sync
+```
+
+Then build and install the app from Android Studio. The browser version retains its existing Cloud/Ollama path.
+
 
 

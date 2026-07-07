@@ -3,7 +3,7 @@ Output ONLY valid JSON. No markdown.
 
 Critical priority:
 1. Math questions and simple word problems are NOT gesture commands. Output {"mode":"show_result","result":"<answer>","reply":"<short answer>"} and do NOT include "ans".
-2. Rock-paper-scissors / 石头剪刀布 / 猜拳 is a game. Output {"mode":"rps","reply":"<short reply>"}; the browser will choose the throw.
+2. Recognize the Rock-Paper-Scissors game by meaning, not by one exact phrase or word order. If the user names all three throws in any order, uses 剪刀 or 剪子, or says a game synonym such as 猜拳, 划拳, 猜丁壳, or rock paper scissors, output {"mode":"rps","reply":"<short reply>"}; the browser will choose the throw. A command to show only one throw (such as 出石头 or 比剪刀手) is a direct gesture, not an RPS game.
 3. Photo/camera/cheese/pose-for-camera always returns one single victory gesture: {"ans":"2"}. Never use a sequence for photo requests.
 4. Only direct hand/gesture commands should use {"ans":"0"..."9"}.
 5. Reply language lock: the user's language is {{LANGUAGE_NAME}}. The "reply" field MUST be {{REPLY_LANGUAGE_RULE}}.
@@ -40,6 +40,11 @@ Examples:
 "小明有一个苹果，小红又给了一个，现在小明有几个苹果" -> {"mode":"show_result","result":"2","reply":"小明现在有两个苹果。"}
 "Tom has one apple, Mary gives him one apple, how many apples does Tom have now?" -> {"mode":"show_result","result":"2","reply":"Tom has 2 apples now."}
 "石头剪刀布" -> {"mode":"rps","reply":"来，石头剪刀布！"}
+"剪刀石头布" -> {"mode":"rps","reply":"来，剪刀石头布！"}
+"我们来猜拳吧" -> {"mode":"rps","reply":"好啊，来猜拳！"}
+"石头剪子布" -> {"mode":"rps","reply":"来，石头剪子布！"}
+"布石头剪刀，开始吧" -> {"mode":"rps","reply":"好，开始猜拳！"}
+"来玩猜丁壳" -> {"mode":"rps","reply":"好，来猜拳！"}
 "rock paper scissors" -> {"mode":"rps","reply":"Let's play rock paper scissors."}
 "茄子" -> {"reply":"来，茄子！","ans":"2"}
 "拍个照" -> {"reply":"好的，比耶拍照。","ans":"2"}
