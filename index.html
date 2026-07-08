@@ -327,6 +327,7 @@ let recognition, isRecording = false, finalTranscript = "", currentSTTLanguage =
 let serialPort = null, serialWriter = null, serialWritableClosed = null;
 let bleDevice = null, bleServer = null, bleCharacteristic = null;
 let hardwareWriteChain = Promise.resolve();
+let hardwareWriteGeneration = 0;
 let depthWriteInFlight = false;
 let latestDepthAnglesPayload = null;
 let visionWriteInFlight = false;
@@ -338,11 +339,16 @@ const OLLAMA_BASE_URL = 'http://localhost:11434', OLLAMA_MODEL = 'qwen2.5-coder:
 
 const BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
 const BLE_CHARACTERISTIC_UUID = "abcd1234-5678-90ab-cdef-1234567890ab";
+const SEQUENCE_STORAGE_KEY = "robotHandSequenceLibraryV1";
 
 let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
 let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {};
 let activeRunningId = null, isLibraryPaused = false, currentStepIndexMap = {}, macroTimeoutId = null;
 let lastActionTime = 0;
+let hasLiveBleAngleFeedback = false;
+let manualSliderHoldUntil = [0, 0, 0, 0, 0];
+let lastPlaybackAnglesSent = null;
+let recordingStartAngles = null;
 
 let visionSmoothedAngles = [0, 0, 0, 0, 0];
 const VISION_SMOOTH_FACTOR = 0.28; 
@@ -352,6 +358,7 @@ let lastVisionSendTime = 0;
 let isGloveSyncEnabled = false, isVRSyncEnabled = false, isDepthSyncEnabled = false;
 let depthSocket = null, depthReconnectTimer = null, lastDepthSendTime = 0, depthSyncStartedAt = 0;
 let lastDepthSentAngle = null;
+let vrRecordSamplerId = null, lastVRRecordedAngles = null;
 let handsDetector = null;
 let cameraStream = null;
 let cameraSessionId = 0;
@@ -366,21 +373,82 @@ const DEPTH_SEND_INTERVAL_MS = 300;
 const DEPTH_ARMING_DELAY_MS = 1200;
 const VISION_SEND_INTERVAL_MS = 150;
 const RECORD_STREAM_INTERVAL_MS = 150;
+const VR_RECORD_POLL_INTERVAL_MS = 80;
+const VR_RECORD_INTERVAL_MS = 90;
 const PLAYBACK_MIN_DELAY_MS = 80;
 const RECORD_COMPACT_ANGLE_DELTA = 2;
+const PLAYBACK_STREAM_MIN_DELAY_MS = 220;
+const PLAYBACK_COMPACT_ANGLE_DELTA = 8;
+const VR_RECORD_COMPACT_ANGLE_DELTA = 1;
+const VR_PLAYBACK_STREAM_MIN_DELAY_MS = 150;
+const VR_PLAYBACK_COMPACT_ANGLE_DELTA = 4;
 
 function timeoutPromise(ms, label) {
     return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), ms));
 }
 
-async function writeRawToHardware(payloadStr, label = "Command") {
+function getStreamRecordInterval(label = "") {
+    return /VR Stream/i.test(label) ? VR_RECORD_INTERVAL_MS : RECORD_STREAM_INTERVAL_MS;
+}
+
+function getStreamCompactDelta(label = "") {
+    return /VR Stream/i.test(label) ? VR_RECORD_COMPACT_ANGLE_DELTA : RECORD_COMPACT_ANGLE_DELTA;
+}
+
+function getPlaybackMinDelayForLabel(label = "") {
+    return /VR Stream/i.test(label) ? VR_PLAYBACK_STREAM_MIN_DELAY_MS : PLAYBACK_STREAM_MIN_DELAY_MS;
+}
+
+function getPlaybackCompactDeltaForLabel(label = "") {
+    return /VR Stream/i.test(label) ? VR_PLAYBACK_COMPACT_ANGLE_DELTA : PLAYBACK_COMPACT_ANGLE_DELTA;
+}
+
+function saveSequenceLibrary() {
+    try {
+        localStorage.setItem(SEQUENCE_STORAGE_KEY, JSON.stringify(globalSequenceLibrary));
+    } catch (err) {
+        console.warn("Sequence library save failed:", err);
+        setStatus("Sequence save cache full or unavailable.");
+    }
+}
+
+function loadSequenceLibrary() {
+    try {
+        const raw = localStorage.getItem(SEQUENCE_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            globalSequenceLibrary = parsed;
+        }
+    } catch (err) {
+        console.warn("Sequence library load failed:", err);
+        globalSequenceLibrary = {};
+    }
+}
+
+async function writeRawToHardware(payloadStr, label = "Command", options = {}) {
     if (serialWriter) {
         await Promise.race([serialWriter.write(payloadStr + "\n"), timeoutPromise(HARDWARE_WRITE_TIMEOUT_MS, "Serial write")]);
         document.getElementById("jsonPreview").textContent = `🚀 Serial ${label} -> ${payloadStr}`;
         return true;
     }
+    if (bleDevice) {
+        await ensureBleReady();
+    }
     if (bleCharacteristic) {
-        await bleCharacteristic.writeValueWithResponse(new TextEncoder().encode(payloadStr));
+        const encoder = new TextEncoder();
+        const data = encoder.encode(payloadStr);
+        if (options.noResponse && typeof bleCharacteristic.writeValueWithoutResponse === "function") {
+            await Promise.race([
+                bleCharacteristic.writeValueWithoutResponse(data),
+                timeoutPromise(HARDWARE_WRITE_TIMEOUT_MS, "BLE write")
+            ]);
+        } else {
+            await Promise.race([
+                bleCharacteristic.writeValueWithResponse(data),
+                timeoutPromise(HARDWARE_WRITE_TIMEOUT_MS, "BLE write")
+            ]);
+        }
         document.getElementById("jsonPreview").textContent = `🔵 BLE ${label} -> ${payloadStr}`;
         return true;
     }
@@ -398,16 +466,21 @@ function enqueueHardwareWrite(payload, label = "Command", options = {}) {
     const payloadStr = typeof payload === "string" ? payload : JSON.stringify(payload);
     if (options.priority) {
         clearStreamingCommandBuffers();
+        hardwareWriteGeneration++;
     }
-    const taskGeneration = options.stream ? streamWriteGeneration : null;
+    const taskWriteGeneration = hardwareWriteGeneration;
+    const taskStreamGeneration = options.stream ? streamWriteGeneration : null;
     if (options.dropIfBusy && (depthWriteInFlight || visionWriteInFlight)) {
         return Promise.resolve(false);
     }
     const writeTask = hardwareWriteChain.catch(() => {}).then(() => {
-        if (options.stream && taskGeneration !== streamWriteGeneration) {
+        if (!options.priority && taskWriteGeneration !== hardwareWriteGeneration) {
             return false;
         }
-        return writeRawToHardware(payloadStr, label);
+        if (options.stream && taskStreamGeneration !== streamWriteGeneration) {
+            return false;
+        }
+        return writeRawToHardware(payloadStr, label, options);
     });
     hardwareWriteChain = writeTask;
     return writeTask.catch(err => {
@@ -418,6 +491,35 @@ function enqueueHardwareWrite(payload, label = "Command", options = {}) {
 
 function setStatus(text) {
     document.getElementById("status").textContent = text;
+}
+
+function handleBleDisconnected() {
+    hasLiveBleAngleFeedback = false;
+    bleCharacteristic = null;
+    bleServer = null;
+    document.getElementById("bleBtn").classList.remove("connected");
+    setStatus("BLE Link Disconnected.");
+}
+
+async function bindBleCharacteristic(enableNotifications = true) {
+    const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+    bleCharacteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+    if (enableNotifications) {
+        bleCharacteristic.removeEventListener('characteristicvaluechanged', handleBleAngleFeedback);
+        bleCharacteristic.addEventListener('characteristicvaluechanged', handleBleAngleFeedback);
+        await bleCharacteristic.startNotifications();
+    }
+}
+
+async function ensureBleReady() {
+    if (!bleDevice) throw new Error("BLE not connected.");
+    if (!bleDevice.gatt.connected || !bleCharacteristic) {
+        bleServer = await bleDevice.gatt.connect();
+        await bindBleCharacteristic(true);
+        document.getElementById("bleBtn").classList.add("connected");
+        hasLiveBleAngleFeedback = false;
+        setStatus("BLE Link Reconnected.");
+    }
 }
 
 async function setHardwareControlMode(mode) {
@@ -441,10 +543,23 @@ function updateWirelessToggleUI() {
     document.getElementById('depthToggleStatus').style.color = isDepthSyncEnabled ? '#39ff14' : '#8b949e';
 }
 
+function stopVRRecordSampler() {
+    if (vrRecordSamplerId) clearInterval(vrRecordSamplerId);
+    vrRecordSamplerId = null;
+    lastVRRecordedAngles = null;
+}
+
+function startVRRecordSampler() {
+    stopVRRecordSampler();
+    captureVRRecordFrame();
+    vrRecordSamplerId = setInterval(captureVRRecordFrame, VR_RECORD_POLL_INTERVAL_MS);
+}
+
 function activateWebControlMode() {
     isGloveSyncEnabled = false;
     isVRSyncEnabled = false;
     stopDepthSync({ notifyGateway: true, silent: true });
+    stopVRRecordSampler();
     document.getElementById('gloveDataToggle').checked = false;
     document.getElementById('vrDataToggle').checked = false;
     updateWirelessToggleUI();
@@ -457,6 +572,7 @@ async function toggleGloveSync() {
         stopDepthSync({ notifyGateway: true, silent: true });
         document.getElementById('vrDataToggle').checked = false; 
         isVRSyncEnabled = false;
+        stopVRRecordSampler();
         await setHardwareControlMode("glove");
     } else {
         await setHardwareControlMode("none");
@@ -472,7 +588,9 @@ async function toggleVRSync() {
         document.getElementById('gloveDataToggle').checked = false; 
         isGloveSyncEnabled = false;
         await setHardwareControlMode("vr");
+        startVRRecordSampler();
     } else {
+        stopVRRecordSampler();
         await setHardwareControlMode("none");
     }
     updateWirelessToggleUI();
@@ -492,6 +610,7 @@ async function startDepthSync() {
     document.getElementById('vrDataToggle').checked = false;
     isGloveSyncEnabled = false;
     isVRSyncEnabled = false;
+    stopVRRecordSampler();
     stopAnyRunningSequence();
     clearAllTimers();
     setHardwareControlMode("none");
@@ -816,12 +935,127 @@ function syncSlidersUIOnly() {
     }
 }
 
+function clampAngle(value) {
+    return Math.max(0, Math.min(180, Math.round(Number(value) || 0)));
+}
+
+function readAnglesFromPayloadText(text) {
+    if (!text) return null;
+    const jsonStart = text.indexOf("{");
+    if (jsonStart >= 0) {
+        try {
+            const parsed = JSON.parse(text.slice(jsonStart));
+            const payloadAngles = [parsed.p0, parsed.p1, parsed.p2, parsed.p3, parsed.p4];
+            if (payloadAngles.every(value => value !== undefined)) {
+                return payloadAngles.map(clampAngle);
+            }
+        } catch (_) {}
+    }
+
+    const namedMatches = [...text.matchAll(/\b(?:p|P)([0-4])\s*[:=]\s*(-?\d+(?:\.\d+)?)/g)];
+    if (namedMatches.length >= 5) {
+        const angles = Array(5).fill(null);
+        namedMatches.forEach(match => { angles[Number(match[1])] = clampAngle(match[2]); });
+        if (angles.every(value => value !== null)) return angles;
+    }
+
+    const vrFingerPattern = /(?:T|Thumb|I|Index|M|Middle|R|Ring|P|Pinky)\s*[:=]\s*(-?\d+(?:\.\d+)?)\s*(?:°|deg)?/gi;
+    const fingerAngles = [...text.matchAll(vrFingerPattern)].map(match => clampAngle(match[1]));
+    if (fingerAngles.length >= 5) return fingerAngles.slice(0, 5);
+
+    return null;
+}
+
+function readDisplayedMotorAngles() {
+    const textAngles = readAnglesFromPayloadText(
+        `${document.getElementById("jsonPreview")?.textContent || ""}\n${document.getElementById("poseTextDisplay")?.textContent || ""}`
+    );
+    if (textAngles) return textAngles;
+
+    const labelAngles = [];
+    for (let i = 0; i < 5; i++) {
+        const labelText = document.getElementById(`lblM${i}`)?.textContent || "";
+        const labelMatch = labelText.match(/-?\d+(?:\.\d+)?/);
+        const sliderValue = document.getElementById(`slideM${i}`)?.value;
+        const value = labelMatch ? labelMatch[0] : sliderValue;
+        if (value === undefined || value === "") return null;
+        labelAngles.push(clampAngle(value));
+    }
+    return labelAngles;
+}
+
+function captureVRRecordFrame() {
+    if (!isVRSyncEnabled) return;
+    if (hasLiveBleAngleFeedback) return;
+    const angles = readDisplayedMotorAngles();
+    if (!angles) return;
+
+    currentAngles = angles;
+    syncSlidersUIOnly();
+
+    if (!isMacroRecording) {
+        lastVRRecordedAngles = angles;
+        return;
+    }
+    if (lastVRRecordedAngles && anglesMaxDelta(angles, lastVRRecordedAngles) < getStreamCompactDelta("VR Stream")) return;
+
+    recordCustomAngles("VR Stream", getStreamRecordInterval("VR Stream"), true);
+    lastVRRecordedAngles = [...angles];
+}
+
+function parseBleAngleFeedback(text) {
+    if (!text) return null;
+    try {
+        const payload = JSON.parse(text);
+        const type = String(payload.type || "").toLowerCase();
+        const hasAngles = [payload.p0, payload.p1, payload.p2, payload.p3, payload.p4].every(value => value !== undefined);
+        if (!hasAngles) return null;
+        return {
+            type,
+            angles: [payload.p0, payload.p1, payload.p2, payload.p3, payload.p4].map(clampAngle),
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+function handleBleAngleFeedback(event) {
+    const text = new TextDecoder().decode(event.target.value);
+    const payload = parseBleAngleFeedback(text);
+    if (!payload) return;
+
+    hasLiveBleAngleFeedback = true;
+    const now = Date.now();
+    currentAngles = payload.angles.map((angle, idx) => {
+        if (payload.type === "manual" && now < manualSliderHoldUntil[idx]) {
+            return currentAngles[idx];
+        }
+        return angle;
+    });
+    syncSlidersUIOnly();
+
+    const isVrFrame = payload.type === "vr";
+    const isGloveFrame = payload.type === "glove";
+    const label = isVrFrame ? "VR Stream" : (isGloveFrame ? "Glove Stream" : "Hardware Stream");
+
+    document.getElementById("hugeDisplay").textContent = isVrFrame ? "🥽" : (isGloveFrame ? "🧤" : "⚙️");
+    document.getElementById("poseTextDisplay").textContent = `${label} Active`;
+    document.getElementById("jsonPreview").textContent =
+        `📥 ${payload.type || "feedback"} -> {"p0":${currentAngles[0]},"p1":${currentAngles[1]},"p2":${currentAngles[2]},"p3":${currentAngles[3]},"p4":${currentAngles[4]}}`;
+
+    const modeActive = (isVrFrame && isVRSyncEnabled) || (isGloveFrame && isGloveSyncEnabled);
+    if (isMacroRecording && modeActive) {
+        recordCustomAngles(label, getStreamRecordInterval(label), true);
+    }
+}
+
 function manualMotorMove(idx) {
     if(isVideoTracking) stopCamera();
     activateWebControlMode();
     stopAnyRunningSequence();
     clearAllTimers();
     let val = parseInt(document.getElementById(`slideM${idx}`).value);
+    manualSliderHoldUntil[idx] = Date.now() + 700;
     document.getElementById(`lblM${idx}`).textContent = val + "°";
     currentAngles[idx] = val;
     document.getElementById("hugeDisplay").textContent = "⚙️";
@@ -851,7 +1085,7 @@ function sendTargetAnglesToHardware(p0, p1, p2, p3, p4, options = {}) {
         p3: Math.max(0, Math.min(180, Math.round(p3))),
         p4: Math.max(0, Math.min(180, Math.round(p4)))
     };
-    return enqueueHardwareWrite(payload, "TargetAngles", options);
+    return enqueueHardwareWrite(payload, "TargetAngles", { noResponse: true, ...options });
 }
 
 function sendSpeedFactorToHardware() {
@@ -894,10 +1128,15 @@ async function disconnectSerial() {
 
 async function initBLE() {
     try {
-        bleDevice = await navigator.bluetooth.requestDevice({ filters: [{ name: "RoboticHand" }], optionalServices: [BLE_SERVICE_UUID] });
+        bleDevice = await navigator.bluetooth.requestDevice({
+            filters: [{ name: "RobotHand_BLE" }, { name: "RoboticHand" }],
+            optionalServices: [BLE_SERVICE_UUID]
+        });
+        bleDevice.removeEventListener('gattserverdisconnected', handleBleDisconnected);
+        bleDevice.addEventListener('gattserverdisconnected', handleBleDisconnected);
         bleServer = await bleDevice.gatt.connect();
-        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
-        bleCharacteristic = await service.getCharacteristic(BLE_CHARACTERISTIC_UUID);
+        await bindBleCharacteristic(true);
+        hasLiveBleAngleFeedback = false;
         document.getElementById("bleBtn").classList.add("connected");
         setStatus("BLE Link Connected.");
         sendSpeedFactorToHardware();
@@ -906,6 +1145,14 @@ async function initBLE() {
 
 function disconnectBLE() {
     try {
+        hasLiveBleAngleFeedback = false;
+        manualSliderHoldUntil = [0, 0, 0, 0, 0];
+        if (bleCharacteristic) {
+            bleCharacteristic.removeEventListener('characteristicvaluechanged', handleBleAngleFeedback);
+        }
+        if (bleDevice) {
+            bleDevice.removeEventListener('gattserverdisconnected', handleBleDisconnected);
+        }
         if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
         bleCharacteristic = null;
         bleServer = null;
@@ -927,10 +1174,10 @@ function recordPoseKey(key, delayAfter = 2000) {
 function recordCustomAngles(label, delayAfter = 2000, streaming = false) {
     if (!isMacroRecording) return;
     let now = Date.now(), diff = now - lastActionTime;
-    if (streaming) delayAfter = Math.max(delayAfter, RECORD_STREAM_INTERVAL_MS);
+    if (streaming) delayAfter = Math.max(delayAfter, 60);
     if (streaming && diff < delayAfter) return;
     if (rehabMacroSequence.length > 0) {
-        const minDelay = streaming ? RECORD_STREAM_INTERVAL_MS : 25;
+        const minDelay = streaming ? delayAfter : 25;
         rehabMacroSequence[rehabMacroSequence.length - 1].delayAfter = Math.max(diff, minDelay);
     }
     rehabMacroSequence.push({ isCustomAngles: true, angles: [...currentAngles], label, delayAfter });
@@ -949,14 +1196,51 @@ function anglesMaxDelta(a, b) {
     return maxDelta;
 }
 
+function appendReturnToStartFrame(actions, startAngles) {
+    if (!Array.isArray(startAngles) || startAngles.length !== 5) return actions;
+    if (!actions.length) return actions;
+
+    const lastAction = actions[actions.length - 1];
+    let lastAngles = null;
+    if (lastAction?.isCustomAngles && Array.isArray(lastAction.angles)) {
+        lastAngles = lastAction.angles;
+    } else if (Array.isArray(currentAngles)) {
+        lastAngles = currentAngles;
+    }
+
+    if (anglesMaxDelta(lastAngles, startAngles) <= 0) return actions;
+
+    return [
+        ...actions,
+        {
+            isCustomAngles: true,
+            angles: [...startAngles],
+            label: "Return to Start",
+            delayAfter: 2000
+        }
+    ];
+}
+
 function optimizeRecordedSequence(actions) {
     const optimized = [];
     actions.forEach(action => {
         const last = optimized[optimized.length - 1];
         const isStreamFrame = action.isCustomAngles && /Stream/i.test(action.label || "");
         const lastIsStreamFrame = last && last.isCustomAngles && /Stream/i.test(last.label || "");
-        if (isStreamFrame && lastIsStreamFrame && anglesMaxDelta(action.angles, last.angles) < RECORD_COMPACT_ANGLE_DELTA) {
-            last.delayAfter = Math.max((last.delayAfter || RECORD_STREAM_INTERVAL_MS) + (action.delayAfter || RECORD_STREAM_INTERVAL_MS), RECORD_STREAM_INTERVAL_MS);
+        const combinedDelay = (last?.delayAfter || RECORD_STREAM_INTERVAL_MS) + (action.delayAfter || RECORD_STREAM_INTERVAL_MS);
+        const compactDelta = getPlaybackCompactDeltaForLabel(action.label || last?.label || "");
+        const minPlaybackDelay = getPlaybackMinDelayForLabel(action.label || last?.label || "");
+        if (
+            isStreamFrame &&
+            lastIsStreamFrame &&
+            (
+                anglesMaxDelta(action.angles, last.angles) < compactDelta ||
+                combinedDelay < minPlaybackDelay
+            )
+        ) {
+            last.angles = [...action.angles];
+            last.label = action.label;
+            last.delayAfter = Math.max(combinedDelay, Math.min(action.delayAfter || RECORD_STREAM_INTERVAL_MS, minPlaybackDelay));
             return;
         }
         optimized.push({ ...action });
@@ -994,6 +1278,7 @@ function toggleMacroRecording() {
         stopAnyRunningSequence();
         isMacroRecording = true;
         rehabMacroSequence = [];
+        recordingStartAngles = [...currentAngles];
         lastActionTime = Date.now();
         btn.textContent = "🛑 Stop & Save / 停止并保存";
         btn.style.background = "#ff3b3b";
@@ -1005,12 +1290,14 @@ function toggleMacroRecording() {
     btn.textContent = "🔴 Start Recording / 开始录制";
     btn.style.background = "#f0883b";
     if(rehabMacroSequence.length > 0) {
-        const savedSequence = optimizeRecordedSequence(rehabMacroSequence);
+        const normalizedSequence = appendReturnToStartFrame(rehabMacroSequence, recordingStartAngles);
+        const savedSequence = optimizeRecordedSequence(normalizedSequence);
         let customName = prompt("Name this sequence:", `Sequence-${Object.keys(globalSequenceLibrary).length + 1}`);
         if (customName && customName.trim() !== "") {
             let uniqueId = "seq_" + Math.random().toString(36).slice(2, 11);
             globalSequenceLibrary[uniqueId] = { name: customName.trim(), actions: savedSequence };
-            indicator.textContent = `Saved: ${customName.trim()} (${savedSequence.length}/${rehabMacroSequence.length} frames)`;
+            saveSequenceLibrary();
+            indicator.textContent = `Saved: ${customName.trim()} (${savedSequence.length}/${normalizedSequence.length} frames)`;
             renderSequenceLibraryUI();
         } else {
             indicator.textContent = "Recording discarded.";
@@ -1018,12 +1305,13 @@ function toggleMacroRecording() {
     } else {
         indicator.textContent = "No actions recorded.";
     }
+    recordingStartAngles = null;
 }
 
 function handleControlClick(id, actionType) {
     if (actionType === 'stop') {
         if(macroTimeoutId) clearTimeout(macroTimeoutId);
-        macroTimeoutId = null; activeRunningId = null; isLibraryPaused = false; renderSequenceLibraryUI(); return;
+        macroTimeoutId = null; activeRunningId = null; isLibraryPaused = false; lastPlaybackAnglesSent = null; renderSequenceLibraryUI(); return;
     }
     if (actionType === 'pause') {
         isLibraryPaused = !isLibraryPaused;
@@ -1035,7 +1323,7 @@ function handleControlClick(id, actionType) {
         if(isVideoTracking) stopCamera();
         activateWebControlMode();
         stopAnyRunningSequence();
-        activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0;
+        activeRunningId = id; isLibraryPaused = false; clearAllTimers(); currentStepIndexMap[id] = 0; lastPlaybackAnglesSent = null;
         renderSequenceLibraryUI();
         executeSequenceStep(id, 0);
     }
@@ -1049,18 +1337,23 @@ async function executeSequenceStep(id, stepIndex) {
     currentStepIndexMap[id] = stepIndex;
     const currentStep = seq[stepIndex];
     const stepStartedAt = performance.now();
+    const minDelay = currentStep.isCustomAngles ? getPlaybackMinDelayForLabel(currentStep.label || "") : PLAYBACK_MIN_DELAY_MS;
+    const recordedDelay = Math.max(Number(currentStep.delayAfter) || 2000, minDelay);
     if(currentStep.isCustomAngles) {
         document.getElementById("hugeDisplay").textContent = "⚙️";
         document.getElementById("poseTextDisplay").textContent = "Playback: " + currentStep.label;
-        currentAngles = currentStep.angles.map(value => Math.max(0, Math.min(180, Math.round(Number(value) || 0))));
+        const targetAngles = currentStep.angles.map(value => Math.max(0, Math.min(180, Math.round(Number(value) || 0))));
+        currentAngles = [...targetAngles];
         syncSlidersUIOnly();
-        await sendTargetAnglesToHardware(currentAngles[0], currentAngles[1], currentAngles[2], currentAngles[3], currentAngles[4], { priority: true });
+        if (anglesMaxDelta(targetAngles, lastPlaybackAnglesSent) > 0) {
+            await sendTargetAnglesToHardware(targetAngles[0], targetAngles[1], targetAngles[2], targetAngles[3], targetAngles[4], { priority: true });
+            lastPlaybackAnglesSent = [...targetAngles];
+        }
     } else {
         await executeHardwarePipeline(currentStep.key);
     }
     if (activeRunningId !== id || isLibraryPaused) return;
     const elapsed = performance.now() - stepStartedAt;
-    const recordedDelay = Math.max(Number(currentStep.delayAfter) || 2000, PLAYBACK_MIN_DELAY_MS);
     const nextDelay = Math.max(recordedDelay - elapsed, 0);
     macroTimeoutId = setTimeout(() => executeSequenceStep(id, (stepIndex + 1) % seq.length), nextDelay);
 }
@@ -1070,12 +1363,16 @@ function stopAnyRunningSequence() {
     macroTimeoutId = null;
     activeRunningId = null;
     isLibraryPaused = false;
+    lastPlaybackAnglesSent = null;
     renderSequenceLibraryUI();
 }
 
 function deleteSequence(id) {
     if(activeRunningId === id) stopAnyRunningSequence();
+    const seqName = globalSequenceLibrary[id]?.name || "this sequence";
+    if (!confirm(`Delete "${seqName}"? This will also remove it from local saved data.`)) return;
     delete globalSequenceLibrary[id];
+    saveSequenceLibrary();
     renderSequenceLibraryUI();
 }
 
@@ -1116,7 +1413,8 @@ async function emergencyStop() {
     clearStreamingCommandBuffers();
     currentAngles = [0,0,0,0,0]; syncSlidersUIOnly();
     document.getElementById("hugeDisplay").textContent = "🛑";
-    enqueueHardwareWrite({ command: "reset" }, "RESET", { priority: true });
+    manualSliderHoldUntil = [0, 0, 0, 0, 0];
+    enqueueHardwareWrite({ command: "reset" }, "RESET", { priority: true, noResponse: true });
     setStatus("Reset signal fired.");
 }
 
@@ -1277,6 +1575,7 @@ async function askLLM(userText, forcedLang = null){
                     delayAfter: item.delay || 800
                 }))
             };
+            saveSequenceLibrary();
             activeRunningId = seqId;
             currentStepIndexMap[seqId] = 0;
             renderSequenceLibraryUI();
@@ -1334,7 +1633,7 @@ function speakReply(text, langOverride = null) {
     window.speechSynthesis.speak(utterance);
 }
 
-window.onload = () => { renderSequenceLibraryUI(); syncSlidersUIOnly(); updateSliderLabels(); checkOllamaAvailability(); };
+window.onload = () => { loadSequenceLibrary(); renderSequenceLibraryUI(); syncSlidersUIOnly(); updateSliderLabels(); checkOllamaAvailability(); };
 </script>
 </body>
 </html>
