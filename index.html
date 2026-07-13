@@ -94,6 +94,30 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .pose-text-display { font-size: 18px; color: #58a6ff; margin-top: 10px; font-weight: bold; text-transform: uppercase; }
 .countdown-display { font-size: 14px; color: #ff3b3b; margin-top: 12px; font-family: monospace; font-weight: bold; }
 .json-preview { background: #0d1117; color: #48bb78; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; border: 1px solid #21262d; margin-top: 10px; }
+.training-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.training-card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:15px; display:flex; flex-direction:column; gap:12px; }
+.training-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.training-row input,.training-row select { background:#0d1117; color:#e6edf3; border:1px solid #30363d; border-radius:6px; padding:9px 10px; font-size:13px; }
+.training-row input { flex:1; min-width:180px; }
+.training-btn { border:none; border-radius:6px; padding:10px 14px; color:white; font-size:12px; font-weight:bold; cursor:pointer; }
+.training-btn.primary { background:#1f6feb; }
+.training-btn.record { background:#f0883b; }
+.training-btn.stop { background:#b30000; }
+.training-btn.success { background:#238636; }
+.training-btn:disabled { opacity:0.45; cursor:not-allowed; }
+.training-status { min-height:42px; background:#0d1117; border:1px solid #21262d; border-radius:8px; padding:10px; color:#8b949e; font-size:12px; line-height:1.5; }
+.training-score { font-size:34px; font-weight:900; color:#39ff14; line-height:1; }
+.training-template-list { display:grid; gap:8px; max-height:180px; overflow:auto; }
+.training-template-item { background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.training-template-item.active { border-color:#39ff14; }
+.training-template-meta { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.training-template-name { font-size:13px; font-weight:bold; color:#e6edf3; }
+.training-template-detail { font-size:11px; color:#8b949e; }
+.training-mini-btn { background:#21262d; color:#c9d1d9; border:1px solid #30363d; border-radius:5px; padding:7px 10px; cursor:pointer; font-size:11px; }
+.training-mini-btn.danger { color:#ff7b7b; }
+.vision-camera-block { width:480px; max-width:100%; }
+.camera-caption { margin-top:12px; background:#0d1117; border:2px solid #388bfd; border-radius:10px; padding:14px 16px; color:#e6edf3; font-size:22px; line-height:1.35; font-weight:900; text-align:left; min-height:72px; display:flex; align-items:center; justify-content:flex-start; white-space:pre-line; }
+.camera-caption.idle { color:#8b949e; border-color:#30363d; font-size:18px; font-weight:700; }
 </style>
 </head>
 <body>
@@ -125,9 +149,12 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
     <div class="panel">
         <div class="panel-title">📷 Real-time Computer Vision Motion Capture <span>/ 计算机视觉人手实时动捕追踪</span></div>
         <div class="vision-grid">
-            <div class="video-wrapper">
-                <video id="webcamVideo" width="480" height="360" autoplay muted playsinline></video>
-                <canvas id="outputCanvas" width="480" height="360"></canvas>
+            <div class="vision-camera-block">
+                <div class="video-wrapper">
+                    <video id="webcamVideo" width="480" height="360" autoplay muted playsinline></video>
+                    <canvas id="outputCanvas" width="480" height="360"></canvas>
+                </div>
+                <div id="cameraCaption" class="camera-caption idle">Camera training subtitles will appear here / 训练提示字幕</div>
             </div>
             <div style="display: flex; flex-direction: column; justify-content: center; gap: 15px;">
                 <button id="startWebcamBtn" onclick="startCamera()" style="background: linear-gradient(145deg, #238636, #2ea043); color:white; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟢 Open Video Capture Stream</button>
@@ -226,6 +253,64 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
             <div id="macroIndicator" class="macro-indicator">Ready / 等待拉开录制网...</div>
         </div>
         <div id="sequenceLibraryContainer" class="library-grid"></div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">🧪 Motion Template Training <span>/ 普通训练模式：录制标准动作并评分</span></div>
+        <div class="training-grid">
+            <div class="training-card">
+                <div style="font-size:13px;font-weight:bold;color:#58a6ff;">1. Record Standard Motion / 录制标准动作</div>
+                <div class="training-row">
+                    <input id="trainingTemplateName" type="text" placeholder="Training name / 训练名称">
+                    <select id="trainingDifficulty">
+                        <option value="easy">Easy / 简单</option>
+                        <option value="medium">Medium / 中等</option>
+                        <option value="hard">Hard / 困难</option>
+                    </select>
+                </div>
+                <div class="training-row">
+                    <button id="btnRecordStandard" class="training-btn record" onclick="startStandardTrainingRecording()">Record Standard / 录制标准</button>
+                    <button id="btnStopStandard" class="training-btn stop" onclick="stopStandardTrainingRecording()" disabled>Stop & Save / 停止保存</button>
+                </div>
+                <div class="training-row">
+                    <button id="btnRecordPresetStandard" class="training-btn record" onclick="startPresetTrainingRecording()">Record Predefined / 录预设标准</button>
+                    <button id="btnStopPresetStandard" class="training-btn stop" onclick="stopPresetTrainingRecording()" disabled>Stop Preset / 停止预设录制</button>
+                </div>
+                <div class="training-row">
+                    <select id="trainingSequenceSource">
+                        <option value="">Choose saved sequence / 选择已保存动作序列</option>
+                    </select>
+                    <button class="training-btn primary" onclick="createTrainingTemplateFromSelectedSequence()">Use Sequence / 用动作序列生成训练</button>
+                </div>
+                <div id="trainingRecordStatus" class="training-status">Open the camera, then record a standard hand motion. Camera training mode records only and will not drive the robot hand.</div>
+                <div id="trainingAiInstruction" class="training-status">AI instruction will appear here after a standard motion is saved.</div>
+            </div>
+            <div class="training-card">
+                <div style="font-size:13px;font-weight:bold;color:#58a6ff;">2. Practice & Evaluate / 练习评分</div>
+                <div class="training-row">
+                    <select id="trainingTemplateSelect" onchange="selectTrainingTemplate(this.value)">
+                        <option value="">No template selected / 未选择模板</option>
+                    </select>
+                </div>
+                <div class="training-row">
+                    <button id="btnDemoTraining" class="training-btn primary" onclick="demonstrateSelectedTraining()" disabled>Demo by Robot / 硅胶手示范</button>
+                    <button id="btnStartPractice" class="training-btn success" onclick="startPracticeRecording()" disabled>Start Practice / 开始练习</button>
+                    <button id="btnStopPractice" class="training-btn stop" onclick="stopPracticeRecording()" disabled>Stop & Score / 停止评分</button>
+                </div>
+                <div class="training-row" style="justify-content:space-between;">
+                    <div>
+                        <div style="font-size:11px;color:#8b949e;">Score / 分数</div>
+                        <div id="trainingScore" class="training-score">--</div>
+                    </div>
+                    <div id="trainingResultText" style="font-size:13px;color:#8b949e;flex:1;">Choose a saved template to practice.</div>
+                </div>
+                <div id="trainingStepGuide" class="training-status">Step guide will appear during practice.</div>
+            </div>
+        </div>
+        <div style="margin-top:15px;">
+            <div style="font-size:13px;font-weight:bold;color:#8b949e;margin-bottom:8px;">Saved Templates / 已保存训练模板</div>
+            <div id="trainingTemplateList" class="training-template-list"></div>
+        </div>
     </div>
 
     <div class="panel">
@@ -340,6 +425,7 @@ const OLLAMA_BASE_URL = 'http://localhost:11434', OLLAMA_MODEL = 'qwen2.5-coder:
 const BLE_SERVICE_UUID = "12345678-1234-1234-1234-1234567890ab";
 const BLE_CHARACTERISTIC_UUID = "abcd1234-5678-90ab-cdef-1234567890ab";
 const SEQUENCE_STORAGE_KEY = "robotHandSequenceLibraryV1";
+const TRAINING_TEMPLATE_STORAGE_KEY = "robotHandTrainingTemplatesV1";
 
 let autoResetTimeout = null, countdownInterval = null, secondsRemaining = 0;
 let isMacroRecording = false, rehabMacroSequence = [], globalSequenceLibrary = {};
@@ -365,9 +451,17 @@ let cameraSessionId = 0;
 let cameraFrameRequestId = null;
 let cameraFrameBusy = false;
 let isVideoTracking = false;
+let cameraMode = "control";
+let trainingTemplates = {};
+let selectedTrainingTemplateId = "";
+let trainingCapture = null;
+let lastTrainingFrameTime = 0;
+let activeTrainingSession = null;
+let presetTrainingRecording = null;
 
-const DEPTH_HTTP_URL = "http://localhost:8766";
-const DEPTH_WS_URL = "ws://localhost:8765";
+const PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
+const DEPTH_HTTP_URL = "http://${PI_HOST}:8766";
+const DEPTH_WS_URL = "ws://${PI_HOST}:8765";
 const HARDWARE_WRITE_TIMEOUT_MS = 700;
 const DEPTH_SEND_INTERVAL_MS = 300;
 const DEPTH_ARMING_DELAY_MS = 1200;
@@ -382,6 +476,7 @@ const PLAYBACK_COMPACT_ANGLE_DELTA = 8;
 const VR_RECORD_COMPACT_ANGLE_DELTA = 1;
 const VR_PLAYBACK_STREAM_MIN_DELAY_MS = 150;
 const VR_PLAYBACK_COMPACT_ANGLE_DELTA = 4;
+
 
 function timeoutPromise(ms, label) {
     return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), ms));
@@ -424,6 +519,880 @@ function loadSequenceLibrary() {
         console.warn("Sequence library load failed:", err);
         globalSequenceLibrary = {};
     }
+}
+
+function saveTrainingTemplates() {
+    try {
+        localStorage.setItem(TRAINING_TEMPLATE_STORAGE_KEY, JSON.stringify(trainingTemplates));
+    } catch (err) {
+        console.warn("Training template save failed:", err);
+        setStatus("Training template cache full or unavailable.");
+    }
+}
+
+function loadTrainingTemplates() {
+    try {
+        const raw = localStorage.getItem(TRAINING_TEMPLATE_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            trainingTemplates = parsed;
+        }
+    } catch (err) {
+        console.warn("Training template load failed:", err);
+        trainingTemplates = {};
+    }
+}
+
+function difficultyLabel(value) {
+    return {
+        easy: "Easy / 简单",
+        medium: "Medium / 中等",
+        hard: "Hard / 困难"
+    }[value] || "Easy / 简单";
+}
+
+function escapeHtml(text) {
+    return String(text ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[char]));
+}
+
+function getTemplateFrameSummary(template) {
+    const frameCount = template?.frames?.length || 0;
+    const duration = Math.round(Number(template?.durationMs) || 0);
+    return `${difficultyLabel(template?.difficulty)} · ${frameCount} frames · ${(duration / 1000).toFixed(1)}s`;
+}
+
+function getTemplateInstruction(template) {
+    return template?.aiInstruction || template?.instruction || "Follow the saved standard motion slowly and keep your hand visible in the camera.";
+}
+
+function getTemplateSteps(template) {
+    return Array.isArray(template?.aiSteps) && template.aiSteps.length
+        ? template.aiSteps
+        : buildFallbackMotionSteps(template?.frames || []);
+}
+
+function renderTrainingTemplateUI() {
+    const list = document.getElementById("trainingTemplateList");
+    const select = document.getElementById("trainingTemplateSelect");
+    if (!list || !select) return;
+
+    const ids = Object.keys(trainingTemplates);
+    select.innerHTML = `<option value="">No template selected / 未选择模板</option>` + ids.map(id => {
+        const template = trainingTemplates[id];
+        return `<option value="${id}" ${id === selectedTrainingTemplateId ? "selected" : ""}>${escapeHtml(template.name)} (${difficultyLabel(template.difficulty)})</option>`;
+    }).join("");
+
+    if (!ids.length) {
+        list.innerHTML = `<div style="font-size:13px;color:#8b949e;text-align:center;padding:10px;">No saved training templates</div>`;
+    } else {
+        list.innerHTML = ids.map(id => {
+            const template = trainingTemplates[id];
+            const activeClass = id === selectedTrainingTemplateId ? " active" : "";
+            return `<div class="training-template-item${activeClass}">
+                <div class="training-template-meta">
+                    <div class="training-template-name">${escapeHtml(template.name)}</div>
+                    <div class="training-template-detail">${getTemplateFrameSummary(template)}</div>
+                </div>
+                <div class="card-actions">
+                    <button class="training-mini-btn" onclick="selectTrainingTemplate('${id}')">Select</button>
+                    <button class="training-mini-btn danger" onclick="deleteTrainingTemplate('${id}')">Delete</button>
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    const hasSelected = Boolean(selectedTrainingTemplateId && trainingTemplates[selectedTrainingTemplateId]);
+    document.getElementById("btnDemoTraining").disabled = !hasSelected;
+    document.getElementById("btnStartPractice").disabled = !hasSelected;
+}
+
+function renderTrainingSequenceSourceOptions() {
+    const select = document.getElementById("trainingSequenceSource");
+    if (!select) return;
+    const currentValue = select.value;
+    const ids = Object.keys(globalSequenceLibrary).filter(id => !globalSequenceLibrary[id]?.oneShot);
+    select.innerHTML = `<option value="">Choose saved sequence / 选择已保存动作序列</option>` + ids.map(id => {
+        const seq = globalSequenceLibrary[id];
+        return `<option value="${id}">${escapeHtml(seq.name || id)}</option>`;
+    }).join("");
+    if (currentValue && globalSequenceLibrary[currentValue]) select.value = currentValue;
+}
+
+function selectTrainingTemplate(id) {
+    selectedTrainingTemplateId = id && trainingTemplates[id] ? id : "";
+    const template = trainingTemplates[selectedTrainingTemplateId];
+    document.getElementById("trainingResultText").textContent = template
+        ? `Selected: ${template.name}. ${getTemplateFrameSummary(template)} · ${getTemplateSteps(template).length} steps`
+        : "Choose a saved template to practice.";
+    document.getElementById("trainingAiInstruction").textContent = template
+        ? getTemplateInstruction(template)
+        : "AI instruction will appear here after a standard motion is saved.";
+    document.getElementById("trainingStepGuide").textContent = template
+        ? renderStepGuideText(template, 0)
+        : "Step guide will appear during practice.";
+    document.getElementById("trainingScore").textContent = "--";
+    renderTrainingTemplateUI();
+}
+
+function deleteTrainingTemplate(id) {
+    const name = trainingTemplates[id]?.name || "this template";
+    if (!confirm(`Delete "${name}"?`)) return;
+    delete trainingTemplates[id];
+    if (selectedTrainingTemplateId === id) selectedTrainingTemplateId = "";
+    saveTrainingTemplates();
+    renderTrainingTemplateUI();
+}
+
+function startTrainingCapture(mode) {
+    trainingCapture = {
+        mode,
+        startedAt: Date.now(),
+        frames: []
+    };
+    lastTrainingFrameTime = 0;
+    cameraMode = mode;
+}
+
+function stopTrainingCapture(resetMode = true) {
+    const capture = trainingCapture;
+    trainingCapture = null;
+    lastTrainingFrameTime = 0;
+    if (resetMode) cameraMode = "training_idle";
+    return capture;
+}
+
+function resetTrainingCaptureButtons() {
+    const hasSelected = Boolean(selectedTrainingTemplateId && trainingTemplates[selectedTrainingTemplateId]);
+    document.getElementById("btnRecordStandard").disabled = Boolean(presetTrainingRecording);
+    document.getElementById("btnStopStandard").disabled = true;
+    document.getElementById("btnRecordPresetStandard").disabled = Boolean(presetTrainingRecording);
+    document.getElementById("btnStopPresetStandard").disabled = !presetTrainingRecording;
+    document.getElementById("btnStartPractice").disabled = !hasSelected;
+    document.getElementById("btnStopPractice").disabled = true;
+}
+
+function captureTrainingFrame(angles, now = Date.now()) {
+    if (!trainingCapture || !Array.isArray(angles)) return;
+    if (now - lastTrainingFrameTime < 80) return;
+    lastTrainingFrameTime = now;
+    trainingCapture.frames.push({
+        t: now - trainingCapture.startedAt,
+        features: angles.map(value => Math.max(0, Math.min(1, (Number(value) || 0) / 180)))
+    });
+    const latestFeatures = trainingCapture.frames[trainingCapture.frames.length - 1].features;
+    if (trainingCapture.mode === "training_practice") {
+        processPracticeStepFrame(latestFeatures, now);
+    }
+    const label = trainingCapture.mode === "training_standard" ? "standard" : "practice";
+    const text = `${label} recording: ${trainingCapture.frames.length} frames`;
+    document.getElementById("trainingRecordStatus").textContent = text;
+    if (trainingCapture.mode !== "training_practice" || !activeTrainingSession) {
+        document.getElementById("trainingResultText").textContent = text;
+    }
+}
+
+async function ensureTrainingCamera(mode) {
+    if (isVideoTracking) {
+        cameraMode = mode;
+        return;
+    }
+    cameraMode = mode;
+    await startCamera();
+    cameraMode = mode;
+}
+
+async function startStandardTrainingRecording() {
+    if (presetTrainingRecording) {
+        document.getElementById("trainingRecordStatus").textContent = "Please stop predefined recording first.";
+        return;
+    }
+    stopAnyRunningSequence();
+    clearAllTimers();
+    await ensureTrainingCamera("training_standard");
+    startTrainingCapture("training_standard");
+    document.getElementById("btnRecordStandard").disabled = true;
+    document.getElementById("btnStopStandard").disabled = false;
+    document.getElementById("trainingRecordStatus").textContent = "Recording standard motion... move your hand in front of the camera.";
+    setCameraCaption(captionText("Recording standard motion. Move slowly.", "正在录制标准动作，请慢慢做完整动作"), true);
+    document.getElementById("hugeDisplay").textContent = "🎯";
+    document.getElementById("poseTextDisplay").textContent = "Recording Standard Motion";
+}
+
+function stopStandardTrainingRecording() {
+    const capture = stopTrainingCapture(true);
+    document.getElementById("btnRecordStandard").disabled = false;
+    document.getElementById("btnStopStandard").disabled = true;
+    if (!capture || capture.frames.length < 8) {
+        document.getElementById("trainingRecordStatus").textContent = "Not enough motion data. Please record again with your hand visible.";
+        setCameraCaption(captionText("Not enough motion data. Please record again.", "没有录到足够动作，请重新录制"), true);
+        return;
+    }
+
+    const nameInput = document.getElementById("trainingTemplateName");
+    const name = (nameInput.value || `Training-${Object.keys(trainingTemplates).length + 1}`).trim();
+    const difficulty = document.getElementById("trainingDifficulty").value || "easy";
+    const id = "train_" + Math.random().toString(36).slice(2, 11);
+    trainingTemplates[id] = {
+        id,
+        name,
+        difficulty,
+        createdAt: new Date().toISOString(),
+        durationMs: capture.frames[capture.frames.length - 1].t,
+        frames: normalizeFrameTimeline(capture.frames)
+    };
+    trainingTemplates[id].aiInstruction = fallbackTrainingInstruction(trainingTemplates[id]);
+    trainingTemplates[id].aiSteps = buildFallbackMotionSteps(trainingTemplates[id].frames);
+    selectedTrainingTemplateId = id;
+    saveTrainingTemplates();
+    renderTrainingTemplateUI();
+    nameInput.value = "";
+    document.getElementById("trainingRecordStatus").textContent = `Saved: ${name}. ${getTemplateFrameSummary(trainingTemplates[id])}`;
+    document.getElementById("trainingAiInstruction").textContent = trainingTemplates[id].aiInstruction;
+    document.getElementById("trainingResultText").textContent = "Template saved. AI is preparing a clearer practice instruction.";
+    setCameraCaption(captionText("Standard motion saved. You can start practice.", "标准动作已保存，可以开始练习"), true);
+    analyzeTrainingTemplateWithAI(id);
+}
+
+function sequenceActionToAngles(action) {
+    if (!action) return null;
+    if (action.isCustomAngles && Array.isArray(action.angles)) {
+        return action.angles.slice(0, 5).map(clampAngle);
+    }
+    const key = String(action.key ?? "").trim();
+    if (POSES_DICTIONARY[key]) return [...POSES_DICTIONARY[key]];
+    return null;
+}
+
+function sequenceToTrainingFrames(actions) {
+    const frames = [];
+    let elapsed = 0;
+    actions.forEach(action => {
+        const angles = sequenceActionToAngles(action);
+        if (!angles) return;
+        frames.push({
+            t: elapsed,
+            features: angles.map(value => Math.max(0, Math.min(1, value / 180)))
+        });
+        elapsed += Math.max(Number(action.delayAfter) || 600, 300);
+    });
+    return normalizeFrameTimeline(frames);
+}
+
+function saveTrainingTemplateFromActions(actions, name, difficulty, sourceMeta = {}) {
+    const frames = sequenceToTrainingFrames(actions);
+    if (frames.length < 2) return null;
+    const id = "train_" + Math.random().toString(36).slice(2, 11);
+    trainingTemplates[id] = {
+        id,
+        name,
+        difficulty,
+        ...sourceMeta,
+        createdAt: new Date().toISOString(),
+        durationMs: frames[frames.length - 1].t,
+        frames
+    };
+    trainingTemplates[id].aiInstruction = fallbackTrainingInstruction(trainingTemplates[id]);
+    trainingTemplates[id].aiSteps = buildFallbackMotionSteps(frames);
+    selectedTrainingTemplateId = id;
+    saveTrainingTemplates();
+    renderTrainingTemplateUI();
+    document.getElementById("trainingAiInstruction").textContent = trainingTemplates[id].aiInstruction;
+    analyzeTrainingTemplateWithAI(id);
+    return trainingTemplates[id];
+}
+
+function startPresetTrainingRecording() {
+    if (trainingCapture) stopTrainingCapture(true);
+    stopAnyRunningSequence();
+    clearAllTimers();
+    presetTrainingRecording = {
+        startedAt: Date.now(),
+        lastActionAt: Date.now(),
+        actions: []
+    };
+    document.getElementById("btnRecordPresetStandard").disabled = true;
+    document.getElementById("btnStopPresetStandard").disabled = false;
+    document.getElementById("btnRecordStandard").disabled = true;
+    document.getElementById("trainingRecordStatus").textContent = "Recording predefined standard. Press the predefined gesture buttons below.";
+    document.getElementById("trainingResultText").textContent = "Preset recording active. Tap Fist, Open, Number 1, etc. to build the standard.";
+    setCameraCaption(captionText("Preset standard recording. Tap gesture buttons.", "正在录制预设标准，请点击下方手势按钮"), true);
+}
+
+function capturePresetTrainingAction(key) {
+    if (!presetTrainingRecording || !POSES_DICTIONARY[key]) return;
+    const now = Date.now();
+    const delayAfter = presetTrainingRecording.actions.length
+        ? Math.max(now - presetTrainingRecording.lastActionAt, 300)
+        : 700;
+    if (presetTrainingRecording.actions.length) {
+        presetTrainingRecording.actions[presetTrainingRecording.actions.length - 1].delayAfter = delayAfter;
+    }
+    presetTrainingRecording.actions.push({ key, delayAfter: 700 });
+    presetTrainingRecording.lastActionAt = now;
+    document.getElementById("trainingRecordStatus").textContent =
+        `Preset standard recording: ${presetTrainingRecording.actions.length} gestures`;
+}
+
+function stopPresetTrainingRecording() {
+    const capture = presetTrainingRecording;
+    presetTrainingRecording = null;
+    document.getElementById("btnRecordPresetStandard").disabled = false;
+    document.getElementById("btnStopPresetStandard").disabled = true;
+    document.getElementById("btnRecordStandard").disabled = false;
+    if (!capture || capture.actions.length < 2) {
+        document.getElementById("trainingRecordStatus").textContent = "Not enough predefined gestures. Please record at least two gestures.";
+        setCameraCaption(captionText("Record at least two gesture buttons.", "请至少录制两个预设手势"), true);
+        return;
+    }
+    const nameInput = document.getElementById("trainingTemplateName");
+    const name = (nameInput.value || `Preset Training-${Object.keys(trainingTemplates).length + 1}`).trim();
+    const difficulty = document.getElementById("trainingDifficulty").value || "easy";
+    const template = saveTrainingTemplateFromActions(capture.actions, name, difficulty, { sourceType: "predefined_buttons" });
+    if (!template) {
+        document.getElementById("trainingRecordStatus").textContent = "This predefined recording could not be converted into training data.";
+        return;
+    }
+    nameInput.value = "";
+    document.getElementById("trainingRecordStatus").textContent = `Saved predefined standard: ${name}. ${getTemplateFrameSummary(template)}`;
+    document.getElementById("trainingResultText").textContent = "Predefined standard saved. You can start practice now.";
+    setCameraCaption(captionText("Predefined standard saved. Start practice when ready.", "预设标准已保存，可以开始练习"), true);
+}
+
+function createTrainingTemplateFromSelectedSequence(sourceIdOverride = "") {
+    const sourceId = sourceIdOverride || document.getElementById("trainingSequenceSource")?.value || "";
+    const source = globalSequenceLibrary[sourceId];
+    if (!source || !Array.isArray(source.actions) || !source.actions.length) {
+        document.getElementById("trainingRecordStatus").textContent = "Please choose a saved sequence first.";
+        setCameraCaption(captionText("Choose a saved sequence first.", "请先选择一个已保存动作序列"), true);
+        return;
+    }
+
+    const frames = sequenceToTrainingFrames(source.actions);
+    if (frames.length < 2) {
+        document.getElementById("trainingRecordStatus").textContent = "This sequence does not contain enough usable motion data.";
+        setCameraCaption(captionText("This sequence is too short for training.", "这个动作序列太短，不能生成训练"), true);
+        return;
+    }
+
+    const name = `${source.name || "Predefined Sequence"} Training`;
+    const difficulty = document.getElementById("trainingDifficulty").value || "easy";
+    const template = saveTrainingTemplateFromActions(source.actions, name, difficulty, { sourceSequenceId: sourceId });
+    const sourceSelect = document.getElementById("trainingSequenceSource");
+    if (sourceSelect) sourceSelect.value = sourceId;
+    document.getElementById("trainingRecordStatus").textContent = `Saved from sequence: ${name}. ${getTemplateFrameSummary(template)}`;
+    document.getElementById("trainingResultText").textContent = "Template saved from predefined/recorded sequence. AI is preparing a clearer practice instruction.";
+    setCameraCaption(captionText("Sequence saved as a training template.", "动作序列已保存为训练模板"), true);
+}
+
+async function startPracticeRecording() {
+    if (presetTrainingRecording) {
+        document.getElementById("trainingResultText").textContent = "Please stop predefined recording before practice.";
+        return;
+    }
+    const template = trainingTemplates[selectedTrainingTemplateId];
+    if (!template) return;
+    stopAnyRunningSequence();
+    clearAllTimers();
+    await ensureTrainingCamera("training_practice");
+    startTrainingCapture("training_practice");
+    document.getElementById("btnStartPractice").disabled = true;
+    document.getElementById("btnStopPractice").disabled = false;
+    document.getElementById("trainingScore").textContent = "--";
+    const instruction = getTemplateInstruction(template);
+    document.getElementById("trainingAiInstruction").textContent = instruction;
+    document.getElementById("trainingResultText").textContent = `Practicing: ${template.name}. ${instruction}`;
+    startStepPracticeSession(template);
+    setCameraCaption(captionText("Get ready. Follow the step prompt below.", "准备开始：请看下方当前步骤提示"), true);
+    document.getElementById("hugeDisplay").textContent = "🧪";
+    document.getElementById("poseTextDisplay").textContent = "Practice Recording";
+}
+
+function stopPracticeRecording() {
+    const capture = stopTrainingCapture(true);
+    const sessionCompleted = Boolean(activeTrainingSession?.completed);
+    activeTrainingSession = null;
+    document.getElementById("btnStartPractice").disabled = false;
+    document.getElementById("btnStopPractice").disabled = true;
+    const template = trainingTemplates[selectedTrainingTemplateId];
+    if (!template || !capture || capture.frames.length < 8) {
+        document.getElementById("trainingResultText").textContent = "Not enough practice data. Please try again with your hand visible.";
+        setCameraCaption(captionText("Not enough practice data. Please try again.", "没有录到足够练习动作，请再试一次"), true);
+        return;
+    }
+
+    const result = scoreTrainingMotion(template.frames, normalizeFrameTimeline(capture.frames));
+    document.getElementById("trainingScore").textContent = String(result.score);
+    document.getElementById("trainingResultText").textContent = result.passed
+        ? `Passed. Similarity ${result.score}/100. ${sessionCompleted ? "All guided steps completed." : "Overall motion passed, but some guided steps were not confirmed."}`
+        : `Try again. Similarity ${result.score}/100. ${result.hint}`;
+    const passed = result.passed && sessionCompleted;
+    document.getElementById("hugeDisplay").textContent = passed ? "✅" : "↺";
+    document.getElementById("poseTextDisplay").textContent = passed ? "Training Passed" : "Practice Again";
+    setCameraCaption(passed
+        ? captionText("Training complete. Great job!", "训练完成，做得很好！")
+        : captionText("Almost there. Please try again.", "这次还差一点，请再试一次"), true);
+    if (passed) {
+        executeHardwarePipeline("9");
+        startAutoResetCountdown();
+    }
+}
+
+function normalizeFrameTimeline(frames) {
+    if (!Array.isArray(frames) || !frames.length) return [];
+    const firstT = Number(frames[0].t) || 0;
+    return frames.map(frame => ({
+        t: Math.max(0, (Number(frame.t) || 0) - firstT),
+        features: (frame.features || []).slice(0, 5).map(value => Math.max(0, Math.min(1, Number(value) || 0)))
+    })).filter(frame => frame.features.length === 5);
+}
+
+function resampleFrames(frames, targetCount = 50) {
+    const clean = normalizeFrameTimeline(frames);
+    if (!clean.length) return [];
+    if (clean.length === 1) return Array.from({ length: targetCount }, () => [...clean[0].features]);
+    const duration = Math.max(clean[clean.length - 1].t, 1);
+    const samples = [];
+    for (let i = 0; i < targetCount; i++) {
+        const targetT = (duration * i) / (targetCount - 1);
+        let rightIndex = clean.findIndex(frame => frame.t >= targetT);
+        if (rightIndex <= 0) {
+            samples.push([...clean[0].features]);
+            continue;
+        }
+        if (rightIndex < 0) {
+            samples.push([...clean[clean.length - 1].features]);
+            continue;
+        }
+        const left = clean[rightIndex - 1];
+        const right = clean[rightIndex];
+        const span = Math.max(right.t - left.t, 1);
+        const ratio = Math.max(0, Math.min(1, (targetT - left.t) / span));
+        samples.push(left.features.map((value, idx) => value + (right.features[idx] - value) * ratio));
+    }
+    return samples;
+}
+
+function scoreTrainingMotion(standardFrames, practiceFrames) {
+    const standard = resampleFrames(standardFrames, 50);
+    const practice = resampleFrames(practiceFrames, 50);
+    if (!standard.length || !practice.length) {
+        return { score: 0, passed: false, hint: "No valid hand motion was captured." };
+    }
+    let totalError = 0;
+    let worstFinger = 0;
+    const fingerError = [0, 0, 0, 0, 0];
+    for (let i = 0; i < standard.length; i++) {
+        for (let j = 0; j < 5; j++) {
+            const error = Math.abs(standard[i][j] - practice[i][j]);
+            totalError += error;
+            fingerError[j] += error;
+        }
+    }
+    fingerError.forEach((value, idx) => {
+        if (value > fingerError[worstFinger]) worstFinger = idx;
+    });
+    const averageError = totalError / (standard.length * 5);
+    const score = Math.max(0, Math.min(100, Math.round(100 - averageError * 115)));
+    const fingerNames = ["thumb", "index", "middle", "ring", "pinky"];
+    return {
+        score,
+        passed: score >= 80,
+        hint: `Largest difference: ${fingerNames[worstFinger]} finger.`
+    };
+}
+
+function featureDistance(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return Infinity;
+    let total = 0;
+    for (let i = 0; i < 5; i++) total += Math.abs((Number(a[i]) || 0) - (Number(b[i]) || 0));
+    return total / 5;
+}
+
+const TRAINING_FINGER_ZH = ["拇指", "食指", "中指", "无名指", "小指"];
+const TRAINING_FINGER_EN = ["thumb", "index finger", "middle finger", "ring finger", "pinky"];
+
+function getFingerState(value) {
+    if (value > 0.65) return "curled";
+    if (value < 0.35) return "extended";
+    return "middle";
+}
+
+function joinChineseList(items) {
+    if (!items.length) return "";
+    if (items.length === 1) return items[0];
+    if (items.length === 2) return `${items[0]}和${items[1]}`;
+    return `${items.slice(0, -1).join("、")}和${items[items.length - 1]}`;
+}
+
+function describePoseFromFeatures(features) {
+    const states = features.map(getFingerState);
+    const extendedIndexes = states.map((state, idx) => state === "extended" ? idx : -1).filter(idx => idx >= 0);
+    const curledIndexes = states.map((state, idx) => state === "curled" ? idx : -1).filter(idx => idx >= 0);
+    const middleIndexes = states.map((state, idx) => state === "middle" ? idx : -1).filter(idx => idx >= 0);
+    const extended = extendedIndexes.length;
+    const curled = curledIndexes.length;
+    if (curled === 5) return { label: "握拳", summary: "all fingers mostly closed" };
+    if (extended === 5) return { label: "张开手", summary: "all fingers mostly open" };
+    if (features[1] < 0.35 && features[2] > 0.6 && features[3] > 0.6 && features[4] > 0.6) return { label: "伸出食指", summary: "index finger extended while other fingers are curled" };
+    if (features[1] < 0.35 && features[2] < 0.35 && features[3] > 0.6 && features[4] > 0.6) return { label: "比二", summary: "index and middle fingers extended" };
+    if (curledIndexes.length >= 1 && curledIndexes.length <= 4 && extendedIndexes.length >= 1) {
+        const zhNames = curledIndexes.map(idx => TRAINING_FINGER_ZH[idx]);
+        const enNames = curledIndexes.map(idx => TRAINING_FINGER_EN[idx]);
+        return {
+            label: `${joinChineseList(zhNames)}弯曲`,
+            summary: `${enNames.join(", ")} curled while the other fingers are more open`
+        };
+    }
+    if (extendedIndexes.length >= 1 && extendedIndexes.length <= 3 && curledIndexes.length >= 2) {
+        const zhNames = extendedIndexes.map(idx => TRAINING_FINGER_ZH[idx]);
+        const enNames = extendedIndexes.map(idx => TRAINING_FINGER_EN[idx]);
+        return {
+            label: `${joinChineseList(zhNames)}伸直`,
+            summary: `${enNames.join(", ")} extended while the other fingers are more curled`
+        };
+    }
+    if (middleIndexes.length) {
+        const activeIndexes = features
+            .map((value, idx) => ({ idx, value }))
+            .sort((a, b) => Math.abs(b.value - 0.5) - Math.abs(a.value - 0.5))
+            .slice(0, 2)
+            .map(item => item.idx);
+        const zhNames = activeIndexes.map(idx => TRAINING_FINGER_ZH[idx]);
+        return {
+            label: `${joinChineseList(zhNames)}调整`,
+            summary: `${activeIndexes.map(idx => TRAINING_FINGER_EN[idx]).join(", ")} changing position`
+        };
+    }
+    return { label: "手指调整", summary: "multiple fingers are changing position" };
+}
+
+function describeFingerTransition(previousFeatures, currentFeatures) {
+    if (!Array.isArray(previousFeatures) || !Array.isArray(currentFeatures)) return null;
+    const changes = currentFeatures.map((value, idx) => ({
+        idx,
+        delta: (Number(value) || 0) - (Number(previousFeatures[idx]) || 0)
+    })).filter(item => Math.abs(item.delta) >= 0.22);
+    if (!changes.length) return null;
+
+    const curlChanges = changes.filter(item => item.delta > 0.18);
+    const extendChanges = changes.filter(item => item.delta < -0.18);
+    if (curlChanges.length >= 4) {
+        return { label: "握拳", summary: "most fingers curling together" };
+    }
+    if (extendChanges.length >= 4) {
+        return { label: "张开手", summary: "most fingers extending together" };
+    }
+    const primaryChanges = curlChanges.length >= extendChanges.length ? curlChanges : extendChanges;
+    if (!primaryChanges.length) return null;
+
+    primaryChanges.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    const selected = [primaryChanges[0]];
+    const zhNames = selected.map(item => TRAINING_FINGER_ZH[item.idx]);
+    const enNames = selected.map(item => TRAINING_FINGER_EN[item.idx]);
+    const isCurl = primaryChanges[0].delta > 0;
+    return {
+        label: `${joinChineseList(zhNames)}${isCurl ? "弯曲" : "伸直"}`,
+        summary: `${enNames.join(", ")} ${isCurl ? "curling more than the previous step" : "extending more than the previous step"}`
+    };
+}
+
+function instructionForPoseLabel(label) {
+    if (label === "张开手") return "请慢慢张开手掌。";
+    if (label === "握拳") return "请慢慢握拳。";
+    if (label === "伸出食指") return "请伸出食指，其余手指保持弯曲。";
+    if (label === "比二") return "请伸出食指和中指。";
+    if (/弯曲$/.test(label)) return `请慢慢弯曲${label.replace(/弯曲$/, "")}。`;
+    if (/伸直$/.test(label)) return `请慢慢伸直${label.replace(/伸直$/, "")}。`;
+    if (/调整$/.test(label)) return `请注意${label.replace(/调整$/, "")}的位置变化。`;
+    return `请慢慢做出${label}动作。`;
+}
+
+function englishInstructionForPoseLabel(label) {
+    if (label === "张开手") return "Open your hand slowly.";
+    if (label === "握拳") return "Make a fist slowly.";
+    if (label === "伸出食指") return "Point with your index finger.";
+    if (label === "比二") return "Show number two.";
+    if (label === "手指弯曲") return "Curl your fingers slowly.";
+    if (label === "手指伸展") return "Extend your fingers slowly.";
+    const fingerEntries = TRAINING_FINGER_ZH.map((zh, idx) => ({ zh, en: TRAINING_FINGER_EN[idx] }));
+    const matchedFingers = fingerEntries.filter(item => label.includes(item.zh)).map(item => item.en);
+    const enFingers = matchedFingers.length ? matchedFingers.join(" and ") : "the target finger";
+    if (/弯曲$/.test(label)) return `Curl your ${enFingers} slowly.`;
+    if (/伸直$/.test(label)) return `Extend your ${enFingers} slowly.`;
+    if (/调整$/.test(label)) return `Watch the ${enFingers} position.`;
+    return "Follow this movement.";
+}
+
+function captionText(en, zh) {
+    return `${en}\n${zh}`;
+}
+
+function captionForTrainingStep(step, fallbackZh = "请完成当前动作") {
+    const label = step?.label || "";
+    const zh = step?.instruction || label || fallbackZh;
+    return captionText(englishInstructionForPoseLabel(label), zh);
+}
+
+function sanitizeStepInstruction(label, instruction) {
+    const text = String(instruction || "").replace(/^\s*\d+[\.\)、\s]+/, "").trim();
+    if (!text) return instructionForPoseLabel(label);
+    if (label === "张开手" && /(握拳|弯曲|收拢)/.test(text)) return instructionForPoseLabel(label);
+    if (label === "握拳" && /(张开|伸直|打开)/.test(text)) return instructionForPoseLabel(label);
+    const specificFingers = TRAINING_FINGER_ZH.filter(name => label.includes(name));
+    if (specificFingers.length && specificFingers.some(name => !text.includes(name))) {
+        return instructionForPoseLabel(label);
+    }
+    if (specificFingers.length && /^(请)?慢慢?(弯曲|伸直|移动)?手指/.test(text)) {
+        return instructionForPoseLabel(label);
+    }
+    return text;
+}
+
+function buildFallbackMotionSteps(frames) {
+    const samples = resampleFrames(frames, 60);
+    if (!samples.length) return [];
+    const classified = samples.map((features, index) => ({
+        index,
+        features,
+        pose: describePoseFromFeatures(features)
+    }));
+
+    const segments = [];
+    classified.forEach(item => {
+        const last = segments[segments.length - 1];
+        if (last && last.label === item.pose.label) {
+            last.items.push(item);
+        } else {
+            segments.push({ label: item.pose.label, summary: item.pose.summary, items: [item] });
+        }
+    });
+
+    const minSegmentLength = Math.max(2, Math.round(samples.length * 0.05));
+    const stableSegments = segments.filter(segment => segment.items.length >= minSegmentLength);
+    const sourceSegments = stableSegments.length ? stableSegments : segments;
+
+    const rawSteps = [];
+    sourceSegments.forEach(segment => {
+        const middleItem = segment.items[Math.floor(segment.items.length / 2)];
+        const last = rawSteps[rawSteps.length - 1];
+        const transitionPose = last ? describeFingerTransition(last.targetFeatures, middleItem.features) : null;
+        const stepLabel = transitionPose?.label || segment.label;
+        const stepSummary = transitionPose?.summary || segment.summary;
+        if (last && last.label === stepLabel) {
+            last.targetFeatures = middleItem.features;
+            last.sampleIndex = middleItem.index;
+            return;
+        }
+        rawSteps.push({
+            label: stepLabel,
+            instruction: instructionForPoseLabel(stepLabel),
+            summary: stepSummary,
+            targetFeatures: middleItem.features,
+            sampleIndex: middleItem.index
+        });
+    });
+
+    if (rawSteps.length > 10) {
+        return rawSteps.filter((_, idx) => idx === 0 || idx === rawSteps.length - 1 || idx % Math.ceil(rawSteps.length / 8) === 0).slice(0, 10);
+    }
+    return rawSteps;
+}
+
+function renderStepGuideText(template, currentIndex = 0) {
+    const steps = getTemplateSteps(template);
+    if (!steps.length) return "No step guide available yet.";
+    return steps.map((step, idx) => {
+        const marker = idx === currentIndex ? "▶ " : idx < currentIndex ? "✓ " : "  ";
+        const cleanInstruction = String(step.instruction || step.label || "Follow the motion").replace(/^\s*\d+[\.\)、\s]+/, "");
+        return `${marker}${idx + 1}. ${cleanInstruction}`;
+    }).join("\n");
+}
+
+function updateActiveTrainingStepGuide() {
+    const template = trainingTemplates[selectedTrainingTemplateId];
+    if (!template || !activeTrainingSession) return;
+    document.getElementById("trainingStepGuide").textContent = renderStepGuideText(template, activeTrainingSession.stepIndex);
+}
+
+function startStepPracticeSession(template) {
+    const steps = getTemplateSteps(template);
+    activeTrainingSession = {
+        templateId: template.id,
+        steps,
+        stepIndex: 0,
+        holdStartedAt: 0,
+        completed: false
+    };
+    if (steps.length) {
+        const instruction = steps[0].instruction || getTemplateInstruction(template);
+        document.getElementById("trainingStepGuide").textContent = renderStepGuideText(template, 0);
+        setCameraCaption(captionForTrainingStep(steps[0], instruction), true);
+        speakReply(instruction, "zh-CN");
+    }
+}
+
+function processPracticeStepFrame(features, now = Date.now()) {
+    if (!activeTrainingSession || activeTrainingSession.completed) return;
+    const step = activeTrainingSession.steps[activeTrainingSession.stepIndex];
+    if (!step?.targetFeatures) return;
+    const distance = featureDistance(features, step.targetFeatures);
+    const matched = distance < 0.23;
+    if (!matched) {
+        activeTrainingSession.holdStartedAt = 0;
+        document.getElementById("trainingResultText").textContent = `Current step: ${step.instruction || step.label}. Keep matching the standard pose.`;
+        setCameraCaption(captionForTrainingStep(step), true);
+        return;
+    }
+    if (!activeTrainingSession.holdStartedAt) activeTrainingSession.holdStartedAt = now;
+    const heldLongEnough = now - activeTrainingSession.holdStartedAt >= 450;
+    if (!heldLongEnough) {
+        document.getElementById("trainingResultText").textContent = `Hold it... ${step.label || "current step"}`;
+        setCameraCaption(captionText("Good. Hold this position...", "很好，保持这个动作..."), true);
+        return;
+    }
+
+    activeTrainingSession.stepIndex++;
+    activeTrainingSession.holdStartedAt = 0;
+    if (activeTrainingSession.stepIndex >= activeTrainingSession.steps.length) {
+        activeTrainingSession.completed = true;
+        document.getElementById("trainingStepGuide").textContent = renderStepGuideText(trainingTemplates[activeTrainingSession.templateId], activeTrainingSession.steps.length);
+        document.getElementById("trainingResultText").textContent = "All steps completed. You can stop and score now.";
+        setCameraCaption(captionText("All steps complete. Tap stop to score.", "所有步骤完成，请点击停止评分"), true);
+        speakReply("很好，所有步骤都完成了。", "zh-CN");
+        return;
+    }
+
+    const nextStep = activeTrainingSession.steps[activeTrainingSession.stepIndex];
+    updateActiveTrainingStepGuide();
+    const nextInstruction = nextStep.instruction || nextStep.label || "请继续下一个动作。";
+    document.getElementById("trainingResultText").textContent = `Good. Next: ${nextInstruction}`;
+    setCameraCaption(captionForTrainingStep(nextStep, nextInstruction), true);
+    speakReply(nextInstruction, "zh-CN");
+}
+
+function summarizeMotionForInstruction(frames) {
+    const samples = resampleFrames(frames, 12);
+    if (!samples.length) return "No valid hand motion summary.";
+    const fingerNames = ["thumb", "index", "middle", "ring", "pinky"];
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const maxValues = Array(5).fill(0);
+    const minValues = Array(5).fill(1);
+    samples.forEach(sample => {
+        sample.forEach((value, idx) => {
+            maxValues[idx] = Math.max(maxValues[idx], value);
+            minValues[idx] = Math.min(minValues[idx], value);
+        });
+    });
+    const activeFingers = fingerNames.filter((_, idx) => maxValues[idx] - minValues[idx] > 0.25);
+    const startsClosed = first.reduce((sum, value) => sum + value, 0) / 5 > 0.55;
+    const endsClosed = last.reduce((sum, value) => sum + value, 0) / 5 > 0.55;
+    return [
+        `Active fingers: ${activeFingers.length ? activeFingers.join(", ") : "small motion"}.`,
+        `Start: ${startsClosed ? "mostly closed" : "mostly open"}.`,
+        `End: ${endsClosed ? "mostly closed" : "mostly open"}.`,
+        `Sampled curl timeline: ${samples.map(sample => `[${sample.map(value => value.toFixed(2)).join(",")}]`).join(" -> ")}`
+    ].join("\n");
+}
+
+function fallbackTrainingInstruction(template) {
+    const summary = summarizeMotionForInstruction(template.frames || []);
+    const openCloseHint = /Start: mostly open[\s\S]*End: mostly closed/.test(summary)
+        ? "先保持手掌较放松，然后慢慢弯曲手指。"
+        : /Start: mostly closed[\s\S]*End: mostly open/.test(summary)
+            ? "先保持握拳或弯曲状态，然后慢慢张开手指。"
+            : "请按照标准动作的节奏慢慢移动手指。";
+    return `训练说明：${openCloseHint}练习时把手放在摄像头中央，动作不用太快，尽量让五根手指的变化和示范保持一致。`;
+}
+
+async function analyzeTrainingTemplateWithAI(templateId) {
+    const template = trainingTemplates[templateId];
+    if (!template) return;
+    const instructionBox = document.getElementById("trainingAiInstruction");
+    instructionBox.textContent = "AI is analyzing the recorded standard motion...";
+    const fallbackSteps = getTemplateSteps(template);
+    const systemPrompt = [
+        "You are a hand rehabilitation coach.",
+        "You will receive summarized hand motion steps extracted from camera data.",
+        "Name each step and write short Chinese instructions for practice.",
+        "Do not change the step count, step order, or label_hint meaning.",
+        "If label_hint is 张开手, keep it as an open-hand instruction. If label_hint is 握拳, keep it as a fist instruction.",
+        "If label_hint includes a specific finger name such as 拇指, 食指, 中指, 无名指, or 小指, the instruction must keep that exact finger name.",
+        "Do not replace a specific finger movement with a vague phrase like 手指弯曲 or 手指伸展.",
+        "Use warm, simple language. Do not mention JSON, arrays, algorithms, MediaPipe, or scores.",
+        "Return JSON only with this shape: {\"overall_instruction\":\"...\",\"steps\":[{\"label\":\"...\",\"instruction\":\"...\"}]}."
+    ].join("\n");
+    const userPrompt = [
+        `Training name: ${template.name}`,
+        `Difficulty: ${difficultyLabel(template.difficulty)}`,
+        `Duration: ${(Number(template.durationMs || 0) / 1000).toFixed(1)} seconds`,
+        summarizeMotionForInstruction(template.frames),
+        "Detected steps:",
+        JSON.stringify(fallbackSteps.map((step, idx) => ({
+            index: idx + 1,
+            summary: step.summary,
+            label_hint: step.label
+        })), null, 2)
+    ].join("\n");
+
+    try {
+        const raw = currentModelSource === "local"
+            ? await callLocalLLM(userPrompt, systemPrompt)
+            : await callCloudLLM(userPrompt, systemPrompt);
+        const jsonText = RobotHandRules.extractFirstJSON(String(raw || "")) || "";
+        const parsed = JSON.parse(jsonText);
+        template.aiInstruction = String(parsed.overall_instruction || "").trim() || fallbackTrainingInstruction(template);
+        if (Array.isArray(parsed.steps) && parsed.steps.length) {
+            template.aiSteps = fallbackSteps.map((step, idx) => ({
+                ...step,
+                label: step.label,
+                instruction: sanitizeStepInstruction(step.label, parsed.steps[idx]?.instruction || step.instruction)
+            }));
+        }
+    } catch (err) {
+        template.aiInstruction = fallbackTrainingInstruction(template);
+        template.aiSteps = fallbackSteps;
+        console.warn("Training AI analysis failed:", err);
+    }
+    saveTrainingTemplates();
+    if (selectedTrainingTemplateId === templateId) {
+        instructionBox.textContent = template.aiInstruction;
+        document.getElementById("trainingResultText").textContent = "Template saved with AI training instruction.";
+    }
+    renderTrainingTemplateUI();
+}
+
+async function demonstrateSelectedTraining() {
+    const template = trainingTemplates[selectedTrainingTemplateId];
+    if (!template || !template.frames?.length) return;
+    if (isVideoTracking) stopCamera();
+    stopAnyRunningSequence();
+    clearAllTimers();
+    const demoId = "training_demo_" + Date.now();
+    const demoFrames = resampleFrames(template.frames, Math.min(40, Math.max(10, template.frames.length))).map(features => ({
+        isCustomAngles: true,
+        angles: features.map(value => Math.round(value * 180)),
+        label: "Training Demo",
+        delayAfter: 120
+    }));
+    globalSequenceLibrary[demoId] = { name: `Demo: ${template.name}`, actions: demoFrames, oneShot: true };
+    activeRunningId = demoId;
+    isLibraryPaused = false;
+    currentStepIndexMap[demoId] = 0;
+    lastPlaybackAnglesSent = null;
+    renderSequenceLibraryUI();
+    const instruction = getTemplateInstruction(template);
+    document.getElementById("trainingAiInstruction").textContent = instruction;
+    document.getElementById("trainingResultText").textContent = `Demonstrating: ${template.name}. ${instruction}`;
+    speakReply(instruction, "zh-CN");
+    executeSequenceStep(demoId, 0);
 }
 
 async function writeRawToHardware(payloadStr, label = "Command", options = {}) {
@@ -491,6 +1460,13 @@ function enqueueHardwareWrite(payload, label = "Command", options = {}) {
 
 function setStatus(text) {
     document.getElementById("status").textContent = text;
+}
+
+function setCameraCaption(text, active = true) {
+    const caption = document.getElementById("cameraCaption");
+    if (!caption) return;
+    caption.textContent = text;
+    caption.classList.toggle("idle", !active);
 }
 
 function handleBleDisconnected() {
@@ -789,6 +1765,7 @@ async function startCamera() {
     const sessionId = ++cameraSessionId;
     releaseCameraResources();
     if (!handsDetector) initMediaPipeHands();
+    cameraMode = "control";
     activateWebControlMode();
     clearAllTimers();
 
@@ -802,6 +1779,9 @@ async function startCamera() {
         await videoElement.play();
         isVideoTracking = true;
         setStatus('Camera active.');
+        setCameraCaption(cameraMode === "control"
+            ? captionText("Camera control mode active.", "摄像头控制模式已开启")
+            : captionText("Training camera active.", "训练摄像头已开启"), cameraMode !== "control");
         runCameraFrameLoop(sessionId);
     } catch (error) {
         setStatus(`Camera failed: ${error.message}`);
@@ -812,8 +1792,12 @@ function stopCamera() {
     cameraSessionId++;
     releaseCameraResources();
     latestVisionAnglesPayload = null;
+    stopTrainingCapture(true);
+    activeTrainingSession = null;
+    resetTrainingCaptureButtons();
     const canvas = document.getElementById('outputCanvas');
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    setCameraCaption(captionText("Camera training subtitles will appear here.", "训练提示字幕会显示在这里"), false);
     setStatus("Camera stream closed.");
 }
 
@@ -865,9 +1849,14 @@ function onHandVisionResults(results) {
         currentAngles = visionSmoothedAngles.map(Math.round);
         syncSlidersUIOnly();
         document.getElementById("hugeDisplay").textContent = "👁️";
-        document.getElementById("poseTextDisplay").textContent = "Vision Stream Active";
+        document.getElementById("poseTextDisplay").textContent = cameraMode === "control" ? "Vision Stream Active" : "Training Camera Active";
         
         let now = Date.now();
+        if (cameraMode !== "control") {
+            captureTrainingFrame(currentAngles, now);
+            return;
+        }
+
         if (isMacroRecording && now - lastActionTime >= RECORD_STREAM_INTERVAL_MS) {
             recordCustomAngles("Mocap Stream", RECORD_STREAM_INTERVAL_MS, true);
         }
@@ -1071,6 +2060,7 @@ function triggerDirect(action) {
     let keyStr = String(action).trim();
     if (POSES_DICTIONARY[keyStr]) {
         stopAnyRunningSequence();
+        capturePresetTrainingAction(keyStr);
         if(isMacroRecording) recordPoseKey(keyStr, 2000);
         executeHardwarePipeline(keyStr);
         startAutoResetCountdown();
@@ -1252,6 +2242,7 @@ function renderSequenceLibraryUI() {
     const container = document.getElementById("sequenceLibraryContainer");
     if(Object.keys(globalSequenceLibrary).length === 0) {
         container.innerHTML = `<div style="font-size:13px; color:#8b949e; text-align:center; padding:10px;">No saved sequences</div>`;
+        renderTrainingSequenceSourceOptions();
         return;
     }
     let htmlPool = "";
@@ -1260,16 +2251,18 @@ function renderSequenceLibraryUI() {
         let flowChain = seqData.actions.map(item => item.isCustomAngles ? `[${item.label}]` : (EM_DISPLAY[item.key] || item.key)).join(" -> ");
         if(flowChain.length > 60) flowChain = flowChain.substring(0, 57) + "...";
         let isRunning = (activeRunningId === id);
+        let trainButtonHtml = seqData.oneShot ? "" : `<button class="run-seq-btn" onclick="createTrainingTemplateFromSelectedSequence('${id}')">Train</button>`;
         let buttonsHtml = isRunning ? `
             <button class="pause-seq-btn ${isLibraryPaused ? 'btn-is-paused' : ''}" onclick="handleControlClick('${id}', 'pause')">${isLibraryPaused ? '▶️ Resume' : '⏸️ Pause'}</button>
             <button class="run-seq-btn active-stop" onclick="handleControlClick('${id}', 'stop')">🛑 Stop</button>
-        ` : `<button class="run-seq-btn" onclick="handleControlClick('${id}', 'run')">🔮 Run</button>`;
+        ` : `${trainButtonHtml}<button class="run-seq-btn" onclick="handleControlClick('${id}', 'run')">🔮 Run</button>`;
         htmlPool += `<div class="library-card ${isRunning ? 'card-running' : ''}">
             <div class="library-info"><div class="library-name">📂 ${seqData.name}</div><div class="library-meta">Flow: ${flowChain}</div></div>
             <div class="card-actions">${buttonsHtml}<button class="del-seq-btn" onclick="deleteSequence('${id}')">🗑️ Del</button></div>
         </div>`;
     });
     container.innerHTML = htmlPool;
+    renderTrainingSequenceSourceOptions();
 }
 
 function toggleMacroRecording() {
@@ -1331,7 +2324,8 @@ function handleControlClick(id, actionType) {
 
 async function executeSequenceStep(id, stepIndex) {
     if (activeRunningId !== id || isLibraryPaused) return;
-    const seq = globalSequenceLibrary[id]?.actions || [];
+    const seqData = globalSequenceLibrary[id] || {};
+    const seq = seqData.actions || [];
     if (!seq.length) return;
     if (stepIndex >= seq.length) stepIndex = 0;
     currentStepIndexMap[id] = stepIndex;
@@ -1353,6 +2347,13 @@ async function executeSequenceStep(id, stepIndex) {
         await executeHardwarePipeline(currentStep.key);
     }
     if (activeRunningId !== id || isLibraryPaused) return;
+    if (seqData.oneShot && stepIndex >= seq.length - 1) {
+        activeRunningId = null;
+        delete globalSequenceLibrary[id];
+        renderSequenceLibraryUI();
+        document.getElementById("trainingResultText").textContent = "Demo finished. Start practice when ready.";
+        return;
+    }
     const elapsed = performance.now() - stepStartedAt;
     const nextDelay = Math.max(recordedDelay - elapsed, 0);
     macroTimeoutId = setTimeout(() => executeSequenceStep(id, (stepIndex + 1) % seq.length), nextDelay);
@@ -1633,7 +2634,15 @@ function speakReply(text, langOverride = null) {
     window.speechSynthesis.speak(utterance);
 }
 
-window.onload = () => { loadSequenceLibrary(); renderSequenceLibraryUI(); syncSlidersUIOnly(); updateSliderLabels(); checkOllamaAvailability(); };
+window.onload = () => {
+    loadSequenceLibrary();
+    loadTrainingTemplates();
+    renderSequenceLibraryUI();
+    renderTrainingTemplateUI();
+    syncSlidersUIOnly();
+    updateSliderLabels();
+    checkOllamaAvailability();
+};
 </script>
 </body>
 </html>
