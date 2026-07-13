@@ -773,15 +773,23 @@ function sequenceActionToAngles(action) {
 function sequenceToTrainingFrames(actions) {
     const frames = [];
     let elapsed = 0;
+    let lastFeatures = null;
     actions.forEach(action => {
         const angles = sequenceActionToAngles(action);
         if (!angles) return;
+        lastFeatures = angles.map(value => Math.max(0, Math.min(1, value / 180)));
         frames.push({
             t: elapsed,
-            features: angles.map(value => Math.max(0, Math.min(1, value / 180)))
+            features: lastFeatures
         });
         elapsed += Math.max(Number(action.delayAfter) || 600, 300);
     });
+    if (lastFeatures && elapsed > (frames[frames.length - 1]?.t || 0)) {
+        frames.push({
+            t: elapsed,
+            features: [...lastFeatures]
+        });
+    }
     return normalizeFrameTimeline(frames);
 }
 
@@ -846,6 +854,9 @@ function stopPresetTrainingRecording() {
     document.getElementById("btnRecordPresetStandard").disabled = false;
     document.getElementById("btnStopPresetStandard").disabled = true;
     document.getElementById("btnRecordStandard").disabled = false;
+    if (capture?.actions?.length) {
+        capture.actions[capture.actions.length - 1].delayAfter = Math.max(Date.now() - capture.lastActionAt, 300);
+    }
     if (!capture || capture.actions.length < 2) {
         document.getElementById("trainingRecordStatus").textContent = "Not enough predefined gestures. Please record at least two gestures.";
         setCameraCaption(captionText("Record at least two gesture buttons.", "请至少录制两个预设手势"), true);
@@ -999,12 +1010,18 @@ function scoreTrainingMotion(standardFrames, practiceFrames) {
         if (value > fingerError[worstFinger]) worstFinger = idx;
     });
     const averageError = totalError / (standard.length * 5);
-    const score = Math.max(0, Math.min(100, Math.round(100 - averageError * 115)));
+    const standardDuration = Math.max(Number(normalizeFrameTimeline(standardFrames).at(-1)?.t) || 1, 1);
+    const practiceDuration = Math.max(Number(normalizeFrameTimeline(practiceFrames).at(-1)?.t) || 1, 1);
+    const timingRatio = Math.min(standardDuration, practiceDuration) / Math.max(standardDuration, practiceDuration);
+    const timingPenalty = Math.round((1 - timingRatio) * 18);
+    const score = Math.max(0, Math.min(100, Math.round(100 - averageError * 115 - timingPenalty)));
     const fingerNames = ["thumb", "index", "middle", "ring", "pinky"];
     return {
         score,
         passed: score >= 80,
-        hint: `Largest difference: ${fingerNames[worstFinger]} finger.`
+        hint: timingPenalty > 6
+            ? `Largest difference: ${fingerNames[worstFinger]} finger. Try to match the recorded timing.`
+            : `Largest difference: ${fingerNames[worstFinger]} finger.`
     };
 }
 
@@ -1376,12 +1393,19 @@ async function demonstrateSelectedTraining() {
     stopAnyRunningSequence();
     clearAllTimers();
     const demoId = "training_demo_" + Date.now();
-    const demoFrames = resampleFrames(template.frames, Math.min(40, Math.max(10, template.frames.length))).map(features => ({
-        isCustomAngles: true,
-        angles: features.map(value => Math.round(value * 180)),
-        label: "Training Demo",
-        delayAfter: 120
-    }));
+    const sourceFrames = normalizeFrameTimeline(template.frames);
+    const demoFrames = sourceFrames.map((frame, idx) => {
+        const nextFrame = sourceFrames[idx + 1];
+        const delayAfter = nextFrame
+            ? Math.max((Number(nextFrame.t) || 0) - (Number(frame.t) || 0), 120)
+            : Math.max(Number(template.finalHoldMs) || 600, 300);
+        return {
+            isCustomAngles: true,
+            angles: frame.features.map(value => Math.round(value * 180)),
+            label: "Training Demo",
+            delayAfter
+        };
+    });
     globalSequenceLibrary[demoId] = { name: `Demo: ${template.name}`, actions: demoFrames, oneShot: true };
     activeRunningId = demoId;
     isLibraryPaused = false;
