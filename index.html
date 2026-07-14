@@ -128,10 +128,11 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .elder-action-btn.start { background:#238636; }
 .elder-action-btn.pause { background:#d29922; color:#0a0f1d; }
 .elder-action-btn.rest { background:#b30000; }
+.elder-action-btn.mic { background:#8957e5; }
 .elder-action-btn.password { background:#1f6feb; }
 #elderAssistPanel { display:none; }
 body.elder-mode #elderAssistPanel { display:block; }
-body.elder-mode .header .dropdown,
+body.elder-mode #serialDropdown,
 body.elder-mode .header-right .elder-mode-btn,
 body.elder-mode .status-bar,
 body.elder-mode .main-container > .panel:not(.elder-keep) { display:none !important; }
@@ -206,10 +207,11 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
             <div class="elder-panel-title">Rest Assist / 语音暂停辅助</div>
             <div id="elderRestStatus" class="elder-rest-status">老年模式开启后，可以说“暂停”“休息一下”“不舒服”，训练会暂停。</div>
             <div class="elder-actions">
-                <button class="elder-action-btn start" onclick="startPracticeRecording()">开始训练</button>
-                <button class="elder-action-btn pause" onclick="pauseElderTraining()">暂停</button>
-                <button class="elder-action-btn rest" onclick="handleElderRestRequest('button')">休息一下</button>
-                <button class="elder-action-btn password" onclick="changeElderExitPassword()">修改密码</button>
+                <button class="elder-action-btn start" onclick="startPracticeRecording()">Start / 开始训练</button>
+                <button class="elder-action-btn pause" onclick="pauseElderTraining()">Pause / 暂停</button>
+                <button class="elder-action-btn rest" onclick="handleElderRestRequest('button')">Rest / 休息一下</button>
+                <button class="elder-action-btn mic" onclick="openElderMicrophone()">Mic / 打开麦克风</button>
+                <button class="elder-action-btn password" onclick="changeElderExitPassword()">Password / 修改密码</button>
             </div>
         </div>
     </div>
@@ -416,13 +418,13 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
             <div id="poseTextDisplay" class="pose-text-display">System Ready</div>
             <div id="countdownDisplay" class="countdown-display"></div>
         </div>
-        <div id="jsonPreview" class="json-preview">📡 Type-C serial bus ready</div>
+        <div id="jsonPreview" class="json-preview">📡 Waiting for Bluetooth connection</div>
     </div>
 </div>
 
 <div class="status-bar">
     <span class="status-dot" id="statusDot"></span>
-    <span id="status">Please bind physical Type-C serial port...</span>
+    <span id="status">Waiting for Bluetooth connection...</span>
     <span class="status-info" id="statusInfo"></span>
 </div>
 
@@ -513,8 +515,8 @@ const DEFAULT_ELDER_EXIT_PASSWORD = "1234";
 const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累"];
 
 const PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
-const DEPTH_HTTP_URL = "http://${PI_HOST}:8766";
-const DEPTH_WS_URL = "ws://${PI_HOST}:8765";
+const DEPTH_HTTP_URL = `http://${PI_HOST}:8766`;
+const DEPTH_WS_URL = `ws://${PI_HOST}:8765`;
 const HARDWARE_WRITE_TIMEOUT_MS = 700;
 const DEPTH_SEND_INTERVAL_MS = 300;
 const DEPTH_ARMING_DELAY_MS = 1200;
@@ -1648,6 +1650,14 @@ function stopElderVoicePause() {
         try { elderRecognition.stop(); } catch (_) {}
     }
     elderRecognition = null;
+}
+
+function openElderMicrophone() {
+    if (elderVoiceListening) {
+        updateElderRestStatus("麦克风已开启：可以说“暂停”“休息一下”“不舒服”。");
+        return;
+    }
+    startElderVoicePause();
 }
 
 function enterElderMode() {
