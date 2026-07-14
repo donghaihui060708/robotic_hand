@@ -118,6 +118,36 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .vision-camera-block { width:480px; max-width:100%; }
 .camera-caption { margin-top:12px; background:#0d1117; border:2px solid #388bfd; border-radius:10px; padding:14px 16px; color:#e6edf3; font-size:22px; line-height:1.35; font-weight:900; text-align:left; min-height:72px; display:flex; align-items:center; justify-content:flex-start; white-space:pre-line; }
 .camera-caption.idle { color:#8b949e; border-color:#30363d; font-size:18px; font-weight:700; }
+.elder-mode-btn { padding:10px 16px; border:1px solid #3fb950; border-radius:7px; background:#12351f; color:#d2ffd8; font-size:12px; font-weight:900; cursor:pointer; white-space:nowrap; }
+.elder-exit-btn { display:none; padding:10px 16px; border:1px solid #f85149; border-radius:7px; background:#3d1515; color:#ffb3b3; font-size:12px; font-weight:900; cursor:pointer; white-space:nowrap; }
+.elder-panel { background:#0d1117; border:2px solid #3fb950; border-radius:12px; padding:16px; display:grid; gap:12px; }
+.elder-panel-title { color:#3fb950; font-size:18px; font-weight:900; }
+.elder-rest-status { background:#101722; border:1px solid #30363d; border-radius:8px; padding:14px; color:#e6edf3; font-size:18px; line-height:1.5; font-weight:800; }
+.elder-actions { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+.elder-action-btn { min-height:64px; border:0; border-radius:8px; color:white; font-size:18px; font-weight:900; cursor:pointer; }
+.elder-action-btn.start { background:#238636; }
+.elder-action-btn.pause { background:#d29922; color:#0a0f1d; }
+.elder-action-btn.rest { background:#b30000; }
+.elder-action-btn.password { background:#1f6feb; }
+#elderAssistPanel { display:none; }
+body.elder-mode #elderAssistPanel { display:block; }
+body.elder-mode .header .dropdown,
+body.elder-mode .header-right .elder-mode-btn,
+body.elder-mode .status-bar,
+body.elder-mode .main-container > .panel:not(.elder-keep) { display:none !important; }
+body.elder-mode .elder-exit-btn { display:inline-block; }
+body.elder-mode .main-container { max-width:920px; gap:14px; }
+body.elder-mode .panel { padding:18px; border-radius:10px; }
+body.elder-mode .panel-title { font-size:20px; text-transform:none; letter-spacing:0; }
+body.elder-mode .training-grid { grid-template-columns:1fr; }
+body.elder-mode .training-card:first-child,
+body.elder-mode #trainingTemplateList .training-mini-btn.danger,
+body.elder-mode #trainingSequenceSource { display:none !important; }
+body.elder-mode .training-btn,
+body.elder-mode .training-row select { min-height:64px; font-size:18px; }
+body.elder-mode .training-status,
+body.elder-mode #trainingResultText { font-size:18px !important; line-height:1.5; }
+body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
 </style>
 </head>
 <body>
@@ -128,6 +158,8 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
         <h2>EMBODIED AI SOFT ROBOTICS CLIENT V10.5</h2>
     </div>
     <div class="header-right">
+        <button id="elderModeBtn" class="elder-mode-btn" onclick="enterElderMode()">Elder Mode / 老年模式</button>
+        <button id="elderExitBtn" class="elder-exit-btn" onclick="requestExitElderMode()">Exit Elder / 退出</button>
         <div class="dropdown" id="serialDropdown">
             <button class="dropdown-btn serial" id="serialBtn" onclick="toggleDropdown('serialDropdown')">🔌 Serial</button>
             <div class="dropdown-menu">
@@ -146,7 +178,7 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 </div>
 
 <div class="main-container">
-    <div class="panel">
+    <div class="panel elder-keep">
         <div class="panel-title">📷 Real-time Computer Vision Motion Capture <span>/ 计算机视觉人手实时动捕追踪</span></div>
         <div class="vision-grid">
             <div class="vision-camera-block">
@@ -165,6 +197,19 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
                     2. Click the green button to start the camera and allow permissions.<br>
                     3. Place your palm in the center of the screen.
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel elder-keep" id="elderAssistPanel">
+        <div class="elder-panel">
+            <div class="elder-panel-title">Rest Assist / 语音暂停辅助</div>
+            <div id="elderRestStatus" class="elder-rest-status">老年模式开启后，可以说“暂停”“休息一下”“不舒服”，训练会暂停。</div>
+            <div class="elder-actions">
+                <button class="elder-action-btn start" onclick="startPracticeRecording()">开始训练</button>
+                <button class="elder-action-btn pause" onclick="pauseElderTraining()">暂停</button>
+                <button class="elder-action-btn rest" onclick="handleElderRestRequest('button')">休息一下</button>
+                <button class="elder-action-btn password" onclick="changeElderExitPassword()">修改密码</button>
             </div>
         </div>
     </div>
@@ -255,7 +300,7 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
         <div id="sequenceLibraryContainer" class="library-grid"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel elder-keep">
         <div class="panel-title">🧪 Motion Template Training <span>/ 普通训练模式：录制标准动作并评分</span></div>
         <div class="training-grid">
             <div class="training-card">
@@ -411,6 +456,7 @@ const EM_TEXT_DISPLAY = {
 let recognition, isRecording = false, finalTranscript = "", currentSTTLanguage = "zh-CN";
 let serialPort = null, serialWriter = null, serialWritableClosed = null;
 let bleDevice = null, bleServer = null, bleCharacteristic = null;
+let nativeBleConnected = false;
 let hardwareWriteChain = Promise.resolve();
 let hardwareWriteGeneration = 0;
 let depthWriteInFlight = false;
@@ -458,6 +504,13 @@ let trainingCapture = null;
 let lastTrainingFrameTime = 0;
 let activeTrainingSession = null;
 let presetTrainingRecording = null;
+let elderModeActive = false;
+let elderRecognition = null;
+let elderVoiceListening = false;
+let elderRestTriggeredAt = 0;
+const ELDER_EXIT_PASSWORD_STORAGE_KEY = "robotHandElderExitPasswordV1";
+const DEFAULT_ELDER_EXIT_PASSWORD = "1234";
+const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累"];
 
 const PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
 const DEPTH_HTTP_URL = "http://${PI_HOST}:8766";
@@ -1425,6 +1478,14 @@ async function writeRawToHardware(payloadStr, label = "Command", options = {}) {
         document.getElementById("jsonPreview").textContent = `🚀 Serial ${label} -> ${payloadStr}`;
         return true;
     }
+    if (nativeBleConnected && window.RobotHandNativeBLE?.available) {
+        await Promise.race([
+            window.RobotHandNativeBLE.write(payloadStr),
+            timeoutPromise(HARDWARE_WRITE_TIMEOUT_MS, "Native BLE write")
+        ]);
+        document.getElementById("jsonPreview").textContent = `📱 BLE ${label} -> ${payloadStr}`;
+        return true;
+    }
     if (bleDevice) {
         await ensureBleReady();
     }
@@ -1493,10 +1554,158 @@ function setCameraCaption(text, active = true) {
     caption.classList.toggle("idle", !active);
 }
 
+function updateElderRestStatus(text) {
+    const status = document.getElementById("elderRestStatus");
+    if (status) status.textContent = text;
+}
+
+function getElderExitPassword() {
+    return localStorage.getItem(ELDER_EXIT_PASSWORD_STORAGE_KEY) || DEFAULT_ELDER_EXIT_PASSWORD;
+}
+
+function setElderExitPassword(password) {
+    localStorage.setItem(ELDER_EXIT_PASSWORD_STORAGE_KEY, password);
+}
+
+function changeElderExitPassword() {
+    const current = prompt("请输入当前退出密码 / Enter current password:");
+    if (current !== getElderExitPassword()) {
+        updateElderRestStatus("当前密码不正确，密码没有修改。");
+        return;
+    }
+    const first = prompt("请输入新密码 / Enter new password:");
+    if (!first || first.length < 4) {
+        updateElderRestStatus("新密码至少需要 4 位，密码没有修改。");
+        return;
+    }
+    const second = prompt("请再次输入新密码确认 / Confirm new password:");
+    if (first !== second) {
+        updateElderRestStatus("两次输入不一致，密码没有修改。");
+        return;
+    }
+    setElderExitPassword(first);
+    updateElderRestStatus("退出密码已修改。请记住新密码。");
+}
+
+function elderTranscriptRequestsRest(text) {
+    const normalized = String(text || "").replace(/\s+/g, "");
+    return ELDER_REST_KEYWORDS.some(keyword => normalized.includes(keyword));
+}
+
+function startElderVoicePause() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        updateElderRestStatus("当前浏览器不支持语音识别，请使用“休息一下”按钮。");
+        return;
+    }
+    if (elderVoiceListening) return;
+    if (isRecording && recognition) {
+        isRecording = false;
+        finalTranscript = "";
+        recognition.stop();
+    }
+    elderRecognition = new SpeechRecognition();
+    elderRecognition.lang = "zh-CN";
+    elderRecognition.interimResults = true;
+    elderRecognition.continuous = true;
+    elderRecognition.onstart = () => {
+        elderVoiceListening = true;
+        updateElderRestStatus("语音暂停已开启：可以说“暂停”“休息一下”“不舒服”。");
+    };
+    elderRecognition.onresult = (event) => {
+        let heard = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            heard += event.results[i][0].transcript || "";
+        }
+        if (heard.trim()) updateElderRestStatus(`听到：${heard.trim()}`);
+        if (elderTranscriptRequestsRest(heard)) {
+            handleElderRestRequest("voice");
+        }
+    };
+    elderRecognition.onerror = () => {
+        elderVoiceListening = false;
+        if (elderModeActive) updateElderRestStatus("语音暂停暂时不可用，可以点击“休息一下”。");
+    };
+    elderRecognition.onend = () => {
+        elderVoiceListening = false;
+        if (elderModeActive) {
+            setTimeout(() => {
+                try { startElderVoicePause(); } catch (_) {}
+            }, 600);
+        }
+    };
+    try {
+        elderRecognition.start();
+    } catch (err) {
+        updateElderRestStatus(`语音暂停启动失败：${err.message}`);
+    }
+}
+
+function stopElderVoicePause() {
+    elderVoiceListening = false;
+    if (elderRecognition) {
+        elderRecognition.onend = null;
+        try { elderRecognition.stop(); } catch (_) {}
+    }
+    elderRecognition = null;
+}
+
+function enterElderMode() {
+    elderModeActive = true;
+    document.body.classList.add("elder-mode");
+    document.getElementById("trainingDifficulty").value = "easy";
+    const voiceToggle = document.getElementById("voiceToggle");
+    if (voiceToggle && !voiceToggle.checked) {
+        voiceToggle.checked = true;
+        toggleVoiceAssistant();
+    }
+    setCameraCaption(captionText("Follow the training prompt. Say pause anytime.", "请跟随训练提示。需要休息时可以直接说“暂停”。"), true);
+    updateElderRestStatus("老年模式已开启。可以说“暂停”“休息一下”“不舒服”。");
+    setStatus("Elder mode active.");
+    startElderVoicePause();
+}
+
+function requestExitElderMode() {
+    const input = prompt("请输入退出老年模式密码 / Enter password to exit elder mode:");
+    if (input !== getElderExitPassword()) {
+        updateElderRestStatus("密码不正确，仍保持老年模式。");
+        return;
+    }
+    elderModeActive = false;
+    document.body.classList.remove("elder-mode");
+    stopElderVoicePause();
+    setStatus("Elder mode closed.");
+}
+
+function pauseElderTraining() {
+    if (trainingCapture?.mode === "training_practice") {
+        stopTrainingCapture(true);
+    }
+    activeTrainingSession = null;
+    resetTrainingCaptureButtons();
+    document.getElementById("trainingResultText").textContent = "Training paused. You can rest and continue later.";
+    document.getElementById("trainingStepGuide").textContent = "已暂停训练，可以休息一下。";
+    setCameraCaption(captionText("Training paused. Take a short rest.", "训练已暂停，可以休息一下。"), true);
+}
+
+function handleElderRestRequest(source = "button") {
+    const now = Date.now();
+    if (now - elderRestTriggeredAt < 2500) return;
+    elderRestTriggeredAt = now;
+    pauseElderTraining();
+    document.getElementById("trainingDifficulty").value = "easy";
+    updateElderRestStatus(source === "voice"
+        ? "已听到休息指令：训练已暂停，稍后可以从简单模式继续。"
+        : "训练已暂停，稍后可以从简单模式继续。");
+    speakReply("训练已暂停，可以休息一下。稍后从简单模式继续。", "zh-CN");
+    executeHardwarePipeline("5");
+}
+
 function handleBleDisconnected() {
     hasLiveBleAngleFeedback = false;
     bleCharacteristic = null;
     bleServer = null;
+    nativeBleConnected = false;
     document.getElementById("bleBtn").classList.remove("connected");
     setStatus("BLE Link Disconnected.");
 }
@@ -1752,6 +1961,9 @@ function initMediaPipeHands() {
 
 function releaseCameraResources() {
     isVideoTracking = false;
+    document.documentElement.classList.remove("camera-stream-active");
+    document.body.classList.remove("camera-stream-active");
+    document.body.classList.remove("rear-camera-active");
     cameraFrameBusy = false;
     if (cameraFrameRequestId !== null) cancelAnimationFrame(cameraFrameRequestId);
     cameraFrameRequestId = null;
@@ -1797,11 +2009,21 @@ async function startCamera() {
     setStatus('Starting camera...');
 
     try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { width: 480, height: 360 } });
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 480 },
+                height: { ideal: 360 }
+            }
+        });
         if (sessionId !== cameraSessionId) return;
         videoElement.srcObject = cameraStream;
         await videoElement.play();
         isVideoTracking = true;
+        document.documentElement.classList.add("camera-stream-active");
+        document.body.classList.add("camera-stream-active");
+        document.body.classList.add("rear-camera-active");
         setStatus('Camera active.');
         setCameraCaption(cameraMode === "control"
             ? captionText("Camera control mode active.", "摄像头控制模式已开启")
@@ -2142,6 +2364,21 @@ async function disconnectSerial() {
 
 async function initBLE() {
     try {
+        if (window.RobotHandNativeBLE?.available) {
+            const device = await window.RobotHandNativeBLE.connect();
+            nativeBleConnected = true;
+            bleDevice = null;
+            bleServer = null;
+            bleCharacteristic = null;
+            hasLiveBleAngleFeedback = false;
+            document.getElementById("bleBtn").classList.add("connected");
+            setStatus(`BLE Link Connected: ${device?.name || "RobotHand"}.`);
+            sendSpeedFactorToHardware();
+            return;
+        }
+        if (!navigator.bluetooth) {
+            throw new Error("Web Bluetooth is not available in this browser.");
+        }
         bleDevice = await navigator.bluetooth.requestDevice({
             filters: [{ name: "RobotHand_BLE" }, { name: "RoboticHand" }],
             optionalServices: [BLE_SERVICE_UUID]
@@ -2161,6 +2398,10 @@ function disconnectBLE() {
     try {
         hasLiveBleAngleFeedback = false;
         manualSliderHoldUntil = [0, 0, 0, 0, 0];
+        if (nativeBleConnected && window.RobotHandNativeBLE?.available) {
+            window.RobotHandNativeBLE.disconnect().catch(() => {});
+            nativeBleConnected = false;
+        }
         if (bleCharacteristic) {
             bleCharacteristic.removeEventListener('characteristicvaluechanged', handleBleAngleFeedback);
         }
@@ -2659,6 +2900,7 @@ function speakReply(text, langOverride = null) {
 }
 
 window.onload = () => {
+    window.addEventListener("robot-hand-ble-disconnected", handleBleDisconnected);
     loadSequenceLibrary();
     loadTrainingTemplates();
     renderSequenceLibraryUI();
