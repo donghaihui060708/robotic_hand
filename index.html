@@ -72,6 +72,16 @@ body{ background:#0a0f1d; color:#e6edf3; min-height:100vh; display:flex; flex-di
 .toggle-slider::before{ content:""; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:#8b949e; transition:0.3s; border-radius:50%; }
 .toggle-switch input:checked + .toggle-slider{ background:#238636; }
 .toggle-switch input:checked + .toggle-slider::before{ transform:translateX(18px); background:white; }
+.wireless-link-box{ display:flex; gap:20px; background:#161b22; padding:15px; border-radius:10px; border:1px dashed #388bfd; flex-wrap:wrap; }
+.wireless-link-item{ display:flex; align-items:center; gap:10px; flex:1; min-width:280px; }
+.pi-host-config{ display:flex; align-items:center; gap:10px; width:100%; min-width:280px; padding-top:12px; border-top:1px solid #21262d; flex-wrap:wrap; }
+.pi-host-config label{ font-size:13px; font-weight:bold; color:#8b949e; }
+.pi-host-config input{ flex:1; min-width:180px; min-height:36px; background:#0d1117; border:1px solid #30363d; color:#e6edf3; padding:8px 10px; border-radius:6px; font-size:13px; outline:none; }
+.pi-host-config input:focus{ border-color:#388bfd; box-shadow:0 0 0 2px rgba(56,139,253,0.2); }
+.pi-host-config button{ min-height:36px; border:none; border-radius:6px; padding:0 12px; color:white; font-size:12px; font-weight:bold; cursor:pointer; }
+.pi-host-save-btn{ background:#1f6feb; }
+.pi-host-reset-btn{ background:#30363d; color:#c9d1d9 !important; }
+.pi-host-hint{ width:100%; font-size:11px; color:#8b949e; line-height:1.45; }
 .model-toggle-btn{ padding:6px 12px; cursor:pointer; font-size:11px; font-weight:bold; background:#161b22; color:#8b949e; border:1px solid #30363d; }
 .model-toggle-btn.model-active{ background:#1f6feb !important; color:white !important; border-color:#388bfd !important; }
 .control-zone { display: flex; gap: 30px; justify-content: center; margin: 15px 0; }
@@ -218,8 +228,8 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
 
     <div class="panel">
         <div class="panel-title">🌐 Wireless Data Link Switches <span>/ 无线数据源同步控制中枢</span></div>
-        <div style="display: flex; gap: 20px; background: #161b22; padding: 15px; border-radius: 10px; border: 1px dashed #388bfd; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+        <div class="wireless-link-box">
+            <div class="wireless-link-item">
                 <span style="font-size: 13px; font-weight: bold; color: #8b949e;">🧤 Smart Glove Sync:</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="gloveDataToggle" onchange="toggleGloveSync()">
@@ -228,7 +238,7 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
                 <span id="gloveToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+            <div class="wireless-link-item">
                 <span style="font-size: 13px; font-weight: bold; color: #8b949e;">🥽 Meta Quest 3 Sync:</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="vrDataToggle" onchange="toggleVRSync()">
@@ -237,13 +247,21 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
                 <span id="vrToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+            <div class="wireless-link-item">
                 <span style="font-size: 13px; font-weight: bold; color: #8b949e;">📏 Orbbec Depth Sync:</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="depthDataToggle" onchange="toggleDepthSync()">
                     <span class="toggle-slider"></span>
                 </label>
                 <span id="depthToggleStatus" style="font-size: 11px; color: #8b949e; font-weight: bold;">DISABLED</span>
+            </div>
+
+            <div class="pi-host-config">
+                <label for="piHostInput">Raspberry Pi IP / 树莓派地址:</label>
+                <input id="piHostInput" type="text" inputmode="url" placeholder="handpi.local or 192.168.1.23" onkeydown="if(event.key==='Enter') savePiHostSetting()">
+                <button class="pi-host-save-btn" onclick="savePiHostSetting()">Save</button>
+                <button class="pi-host-reset-btn" onclick="resetPiHostSetting()">Default</button>
+                <div id="piHostHint" class="pi-host-hint">Current Orbbec gateway host: handpi.local</div>
             </div>
         </div>
     </div>
@@ -514,9 +532,8 @@ const ELDER_EXIT_PASSWORD_STORAGE_KEY = "robotHandElderExitPasswordV1";
 const DEFAULT_ELDER_EXIT_PASSWORD = "1234";
 const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累"];
 
-const PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
-const DEPTH_HTTP_URL = `http://${PI_HOST}:8766`;
-const DEPTH_WS_URL = `ws://${PI_HOST}:8765`;
+let PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
+let depthRuntimeHost = PI_HOST;
 const HARDWARE_WRITE_TIMEOUT_MS = 700;
 const DEPTH_SEND_INTERVAL_MS = 300;
 const DEPTH_ARMING_DELAY_MS = 1200;
@@ -535,6 +552,77 @@ const VR_PLAYBACK_COMPACT_ANGLE_DELTA = 4;
 
 function timeoutPromise(ms, label) {
     return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), ms));
+}
+
+function getDepthHttpUrl() {
+    return `http://${depthRuntimeHost}:8766`;
+}
+
+function getDepthWsUrl() {
+    return `ws://${depthRuntimeHost}:8765`;
+}
+
+function normalizePiHostInput(value) {
+    return String(value || "").trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+}
+
+function updatePiHostUI() {
+    const input = document.getElementById("piHostInput");
+    const hint = document.getElementById("piHostHint");
+    if (input) input.value = PI_HOST;
+    if (hint) {
+        const saved = localStorage.getItem("pi_host");
+        hint.textContent = `Current Orbbec gateway host: ${PI_HOST}${saved ? " (saved for this browser)" : " (default)"}`;
+    }
+}
+
+function applyPiHost(host, persist = true) {
+    const nextHost = normalizePiHostInput(host);
+    if (!nextHost) {
+        setStatus("Enter Raspberry Pi IP or host name first.");
+        updatePiHostUI();
+        return false;
+    }
+    if (persist) localStorage.setItem("pi_host", nextHost);
+    PI_HOST = nextHost;
+    depthRuntimeHost = nextHost;
+    updatePiHostUI();
+    return true;
+}
+
+function savePiHostSetting() {
+    const input = document.getElementById("piHostInput");
+    if (!applyPiHost(input?.value || "", true)) return;
+    if (isDepthSyncEnabled) stopDepthSync({ notifyGateway: false, silent: true });
+    setStatus(`Raspberry Pi host saved: ${PI_HOST}. Turn Orbbec Depth Sync on again.`);
+}
+
+function resetPiHostSetting() {
+    localStorage.removeItem("pi_host");
+    PI_HOST = "handpi.local";
+    depthRuntimeHost = PI_HOST;
+    if (isDepthSyncEnabled) stopDepthSync({ notifyGateway: false, silent: true });
+    updatePiHostUI();
+    setStatus("Raspberry Pi host reset to handpi.local.");
+}
+
+async function resolveDepthGatewayHost() {
+    depthRuntimeHost = PI_HOST;
+    if (!/\.local$/i.test(PI_HOST) || !window.RobotHandNativeNetwork?.available) {
+        return depthRuntimeHost;
+    }
+
+    try {
+        setStatus(`Resolving ${PI_HOST}...`);
+        const result = await window.RobotHandNativeNetwork.resolveMdnsHost(PI_HOST, 2200);
+        if (result?.address) {
+            depthRuntimeHost = result.address;
+            setStatus(`${PI_HOST} resolved to ${depthRuntimeHost}.`);
+        }
+    } catch (err) {
+        console.warn("Native mDNS resolve failed:", err);
+    }
+    return depthRuntimeHost;
 }
 
 function getStreamRecordInterval(label = "") {
@@ -1844,7 +1932,8 @@ async function startDepthSync() {
     sendTargetAnglesToHardware(0, 0, 0, 0, 0, { priority: true });
 
     try {
-        const resp = await fetch(`${DEPTH_HTTP_URL}/mode`, {
+        await resolveDepthGatewayHost();
+        const resp = await fetch(`${getDepthHttpUrl()}/mode`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode: "depth" })
@@ -1862,7 +1951,7 @@ function connectDepthWebSocket() {
     if (depthReconnectTimer) clearTimeout(depthReconnectTimer);
     if (depthSocket) depthSocket.close();
 
-    depthSocket = new WebSocket(DEPTH_WS_URL);
+    depthSocket = new WebSocket(getDepthWsUrl());
     depthSocket.onopen = () => setStatus("Orbbec depth stream connected.");
     depthSocket.onmessage = (event) => {
         try {
@@ -1954,7 +2043,7 @@ function stopDepthSync(options = {}) {
     if (toggle) toggle.checked = false;
     updateWirelessToggleUI();
     if (notifyGateway) {
-        fetch(`${DEPTH_HTTP_URL}/mode`, {
+        fetch(`${getDepthHttpUrl()}/mode`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode: "none" })
@@ -2264,8 +2353,7 @@ function parseBleAngleFeedback(text) {
     }
 }
 
-function handleBleAngleFeedback(event) {
-    const text = new TextDecoder().decode(event.target.value);
+function handleBleAngleFeedbackText(text) {
     const payload = parseBleAngleFeedback(text);
     if (!payload) return;
 
@@ -2293,6 +2381,14 @@ function handleBleAngleFeedback(event) {
         recordCustomAngles(label, getStreamRecordInterval(label), true);
     }
 }
+
+function handleBleAngleFeedback(event) {
+    handleBleAngleFeedbackText(new TextDecoder().decode(event.target.value));
+}
+
+window.addEventListener("robot-hand-native-ble-feedback", (event) => {
+    handleBleAngleFeedbackText(event.detail?.text || "");
+});
 
 function manualMotorMove(idx) {
     if(isVideoTracking) stopCamera();
@@ -2911,6 +3007,7 @@ function speakReply(text, langOverride = null) {
 
 window.onload = () => {
     window.addEventListener("robot-hand-ble-disconnected", handleBleDisconnected);
+    updatePiHostUI();
     loadSequenceLibrary();
     loadTrainingTemplates();
     renderSequenceLibraryUI();
