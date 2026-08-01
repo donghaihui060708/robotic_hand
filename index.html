@@ -1760,15 +1760,20 @@ function enterElderMode() {
 }
 
 function requestExitElderMode() {
-    const input = prompt("请输入退出老年模式密码 / Enter password to exit elder mode:");
-    if (input !== getElderExitPassword()) {
+    const input = prompt("请输入退出老年模式密码 / Enter password to exit elder mode:\n忘记密码可输入 1234 重置 / Enter 1234 to reset if forgotten.");
+    const isResetPassword = input === DEFAULT_ELDER_EXIT_PASSWORD;
+    if (!isResetPassword && input !== getElderExitPassword()) {
         updateElderRestStatus("密码不正确，仍保持老年模式。");
         return;
+    }
+    if (isResetPassword) {
+        setElderExitPassword(DEFAULT_ELDER_EXIT_PASSWORD);
+        updateElderRestStatus("已使用重置密码退出，退出密码已恢复为 1234。");
     }
     elderModeActive = false;
     document.body.classList.remove("elder-mode");
     stopElderVoicePause();
-    setStatus("Elder mode closed.");
+    setStatus(isResetPassword ? "Elder mode closed. Password reset to 1234." : "Elder mode closed.");
 }
 
 function pauseElderTraining() {
