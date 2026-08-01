@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embodied AI Soft Robotics Client V10.5</title>
+<title>Embodied AI Soft Robotics Client</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <style>
 *{ margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
@@ -166,7 +166,7 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
 <div class="header">
     <div style="display:flex;align-items:center;gap:10px;">
         <div class="logo-dot"></div>
-        <h2>EMBODIED AI SOFT ROBOTICS CLIENT V10.5</h2>
+        <h2>EMBODIED AI SOFT ROBOTICS CLIENT</h2>
     </div>
     <div class="header-right">
         <button id="elderModeBtn" class="elder-mode-btn" onclick="enterElderMode()">Elder Mode / 老年模式</button>
@@ -267,15 +267,11 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
     </div>
 
     <div class="panel">
-        <div class="panel-title">🎚️ Real-time Trajectory Tuning <span>/ 硬件级平滑系数动态调节</span></div>
+        <div class="panel-title">🎚️ Real-time Speed Tuning <span>/ 硬件速度调节</span></div>
         <div class="control-sliders">
             <div class="slider-group">
-                <label>Hardware Smooth Step <span><span id="valDuration">0.15</span> (0.01~1.00)</span></label>
+                <label>Hardware Speed Control <span><span id="valDuration">0.15</span> (0.01~1.00)</span></label>
                 <input id="slideDuration" type="range" min="0.01" max="1.00" step="0.01" value="0.15" oninput="updateSliderLabels()">
-            </div>
-            <div class="slider-group">
-                <label>Refresh Mode <span>HARDWARE AUTO</span></label>
-                <input id="slideStepDelay" type="range" min="10" max="100" step="5" value="25" disabled style="opacity:0.3;">
             </div>
         </div>
     </div>
