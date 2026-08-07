@@ -526,7 +526,7 @@ let elderVoiceListening = false;
 let elderRestTriggeredAt = 0;
 const ELDER_EXIT_PASSWORD_STORAGE_KEY = "robotHandElderExitPasswordV1";
 const DEFAULT_ELDER_EXIT_PASSWORD = "1234";
-const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累"];
+const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累", "pause", "stop", "rest", "take a break", "break", "slow down", "too fast", "pain", "hurt", "hurts", "tired", "uncomfortable"];
 
 let PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
 let depthRuntimeHost = PI_HOST;
@@ -1674,8 +1674,8 @@ function changeElderExitPassword() {
 }
 
 function elderTranscriptRequestsRest(text) {
-    const normalized = String(text || "").replace(/\s+/g, "");
-    return ELDER_REST_KEYWORDS.some(keyword => normalized.includes(keyword));
+    const normalized = String(text || "").toLowerCase().replace(/\s+/g, "");
+    return ELDER_REST_KEYWORDS.some(keyword => normalized.includes(String(keyword).toLowerCase().replace(/\s+/g, "")));
 }
 
 function startElderVoicePause() {
@@ -1796,7 +1796,7 @@ function handleElderRestRequest(source = "button") {
     updateElderRestStatus(source === "voice"
         ? "已听到休息指令：训练已暂停，稍后可以从简单模式继续。"
         : "训练已暂停，稍后可以从简单模式继续。");
-    speakReply("训练已暂停，可以休息一下。稍后从简单模式继续。", "zh-CN");
+    speakReply("训练已暂停，可以休息一下。稍后从简单模式继续。Training paused. You can rest now. Continue later in easy mode.", "zh-CN");
     executeHardwarePipeline("5");
 }
 
