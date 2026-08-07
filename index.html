@@ -1691,7 +1691,7 @@ function startElderVoicePause() {
         recognition.stop();
     }
     elderRecognition = new SpeechRecognition();
-    elderRecognition.lang = "zh-CN";
+    elderRecognition.lang = currentSTTLanguage;
     elderRecognition.interimResults = true;
     elderRecognition.continuous = true;
     elderRecognition.onstart = () => {
