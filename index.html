@@ -215,7 +215,7 @@ body.elder-mode .camera-caption { font-size:26px; min-height:92px; }
     <div class="panel elder-keep" id="elderAssistPanel">
         <div class="elder-panel">
             <div class="elder-panel-title">Rest Assist / 语音暂停辅助</div>
-            <div id="elderRestStatus" class="elder-rest-status">老年模式开启后，可以说“暂停”“休息一下”“不舒服”，训练会暂停。</div>
+            <div id="elderRestStatus" class="elder-rest-status">老年模式开启后，可以说“暂停”“休息一下”“不舒服”，也可以说 pause/rest/stop，训练会暂停。</div>
             <div class="elder-actions">
                 <button class="elder-action-btn start" onclick="startPracticeRecording()">Start / 开始训练</button>
                 <button class="elder-action-btn pause" onclick="pauseElderTraining()">Pause / 暂停</button>
@@ -524,8 +524,13 @@ let elderModeActive = false;
 let elderRecognition = null;
 let elderVoiceListening = false;
 let elderRestTriggeredAt = 0;
+let elderVoiceLanguageIndex = 0;
+let elderVoiceRestartTimer = null;
 const ELDER_EXIT_PASSWORD_STORAGE_KEY = "robotHandElderExitPasswordV1";
 const DEFAULT_ELDER_EXIT_PASSWORD = "1234";
+const ELDER_VOICE_LANGUAGES = ["zh-CN", "en-US"];
+const ELDER_VOICE_LANGUAGE_ROTATION_MS = 7000;
+const ELDER_VOICE_REST_COOLDOWN_MS = 10000;
 const ELDER_REST_KEYWORDS = ["不舒服", "疼", "痛", "暂停", "停一下", "休息", "休息一下", "太快", "慢一点", "受不了", "累", "pause", "stop", "rest", "take a break", "break", "slow down", "too fast", "pain", "hurt", "hurts", "tired", "uncomfortable"];
 
 let PI_HOST = localStorage.getItem("pi_host") || "handpi.local";
@@ -1674,8 +1679,23 @@ function changeElderExitPassword() {
 }
 
 function elderTranscriptRequestsRest(text) {
-    const normalized = String(text || "").toLowerCase().replace(/\s+/g, "");
-    return ELDER_REST_KEYWORDS.some(keyword => normalized.includes(String(keyword).toLowerCase().replace(/\s+/g, "")));
+    const source = String(text || "").toLowerCase();
+    const compact = source.replace(/\s+/g, "");
+    const chineseKeywords = ELDER_REST_KEYWORDS.filter(keyword => /[\u4e00-\u9fff]/.test(keyword));
+    const englishKeywords = ELDER_REST_KEYWORDS.filter(keyword => !/[\u4e00-\u9fff]/.test(keyword));
+    return chineseKeywords.some(keyword => compact.includes(keyword.replace(/\s+/g, "")))
+        || englishKeywords.some(keyword => new RegExp(`(^|[^a-z])${keyword.replace(/\s+/g, "\\s+")}([^a-z]|$)`, "i").test(source));
+}
+
+function getElderVoiceLanguage() {
+    return ELDER_VOICE_LANGUAGES[elderVoiceLanguageIndex % ELDER_VOICE_LANGUAGES.length];
+}
+
+function restartElderVoicePauseSoon(delay = 600) {
+    clearTimeout(elderVoiceRestartTimer);
+    elderVoiceRestartTimer = setTimeout(() => {
+        try { startElderVoicePause(); } catch (_) {}
+    }, delay);
 }
 
 function startElderVoicePause() {
@@ -1684,6 +1704,7 @@ function startElderVoicePause() {
         updateElderRestStatus("当前浏览器不支持语音识别，请使用“休息一下”按钮。");
         return;
     }
+    clearTimeout(elderVoiceRestartTimer);
     if (elderVoiceListening) return;
     if (isRecording && recognition) {
         isRecording = false;
@@ -1691,17 +1712,23 @@ function startElderVoicePause() {
         recognition.stop();
     }
     elderRecognition = new SpeechRecognition();
-    elderRecognition.lang = currentSTTLanguage;
-    elderRecognition.interimResults = true;
+    elderRecognition.lang = getElderVoiceLanguage();
+    elderRecognition.interimResults = false;
     elderRecognition.continuous = true;
     elderRecognition.onstart = () => {
         elderVoiceListening = true;
-        updateElderRestStatus("语音暂停已开启：可以说“暂停”“休息一下”“不舒服”。");
+        clearTimeout(elderVoiceRestartTimer);
+        updateElderRestStatus("双语语音暂停已开启：可以说“暂停”“休息一下”“不舒服”，也可以说 pause/rest/stop。");
+        elderVoiceRestartTimer = setTimeout(() => {
+            if (elderRecognition && elderModeActive) {
+                try { elderRecognition.stop(); } catch (_) {}
+            }
+        }, ELDER_VOICE_LANGUAGE_ROTATION_MS);
     };
     elderRecognition.onresult = (event) => {
         let heard = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
-            heard += event.results[i][0].transcript || "";
+            if (event.results[i].isFinal) heard += event.results[i][0].transcript || "";
         }
         if (heard.trim()) updateElderRestStatus(`听到：${heard.trim()}`);
         if (elderTranscriptRequestsRest(heard)) {
@@ -1710,25 +1737,28 @@ function startElderVoicePause() {
     };
     elderRecognition.onerror = () => {
         elderVoiceListening = false;
-        if (elderModeActive) updateElderRestStatus("语音暂停暂时不可用，可以点击“休息一下”。");
+        if (elderModeActive) updateElderRestStatus("语音暂停暂时不可用，可以点击“休息一下”。正在重试双语监听。");
     };
     elderRecognition.onend = () => {
         elderVoiceListening = false;
+        clearTimeout(elderVoiceRestartTimer);
         if (elderModeActive) {
-            setTimeout(() => {
-                try { startElderVoicePause(); } catch (_) {}
-            }, 600);
+            elderVoiceLanguageIndex = (elderVoiceLanguageIndex + 1) % ELDER_VOICE_LANGUAGES.length;
+            restartElderVoicePauseSoon();
         }
     };
     try {
         elderRecognition.start();
     } catch (err) {
-        updateElderRestStatus(`语音暂停启动失败：${err.message}`);
+        elderVoiceLanguageIndex = (elderVoiceLanguageIndex + 1) % ELDER_VOICE_LANGUAGES.length;
+        updateElderRestStatus(`语音暂停启动失败：${err.message}。正在重试双语监听。`);
+        if (elderModeActive) restartElderVoicePauseSoon(900);
     }
 }
 
 function stopElderVoicePause() {
     elderVoiceListening = false;
+    clearTimeout(elderVoiceRestartTimer);
     if (elderRecognition) {
         elderRecognition.onend = null;
         try { elderRecognition.stop(); } catch (_) {}
@@ -1738,7 +1768,7 @@ function stopElderVoicePause() {
 
 function openElderMicrophone() {
     if (elderVoiceListening) {
-        updateElderRestStatus("麦克风已开启：可以说“暂停”“休息一下”“不舒服”。");
+        updateElderRestStatus("麦克风已开启：可以说“暂停”“休息一下”“不舒服”，也可以说 pause/rest/stop。");
         return;
     }
     startElderVoicePause();
@@ -1754,7 +1784,7 @@ function enterElderMode() {
         toggleVoiceAssistant();
     }
     setCameraCaption(captionText("Follow the training prompt. Say pause anytime.", "请跟随训练提示。需要休息时可以直接说“暂停”。"), true);
-    updateElderRestStatus("老年模式已开启。可以说“暂停”“休息一下”“不舒服”。");
+    updateElderRestStatus("老年模式已开启。可以说“暂停”“休息一下”“不舒服”，也可以说 pause/rest/stop。");
     setStatus("Elder mode active.");
     startElderVoicePause();
 }
@@ -1789,8 +1819,9 @@ function pauseElderTraining() {
 
 function handleElderRestRequest(source = "button") {
     const now = Date.now();
-    if (now - elderRestTriggeredAt < 2500) return;
+    if (now - elderRestTriggeredAt < ELDER_VOICE_REST_COOLDOWN_MS) return;
     elderRestTriggeredAt = now;
+    if (source === "voice") stopElderVoicePause();
     pauseElderTraining();
     document.getElementById("trainingDifficulty").value = "easy";
     updateElderRestStatus(source === "voice"
@@ -1798,6 +1829,7 @@ function handleElderRestRequest(source = "button") {
         : "训练已暂停，稍后可以从简单模式继续。");
     speakReply("训练已暂停，可以休息一下。稍后从简单模式继续。Training paused. You can rest now. Continue later in easy mode.", "zh-CN");
     executeHardwarePipeline("5");
+    if (source === "voice" && elderModeActive) restartElderVoicePauseSoon(ELDER_VOICE_REST_COOLDOWN_MS);
 }
 
 function handleBleDisconnected() {
