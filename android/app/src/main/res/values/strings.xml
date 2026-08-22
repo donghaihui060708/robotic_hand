@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Robotic Hand</string>
+    <string name="title_activity_main">Robotic Hand</string>
+    <string name="package_name">com.donghaihui.robothand</string>
+    <string name="custom_url_scheme">com.donghaihui.robothand</string>
+</resources>

@@ -1,0 +1,67 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def llamaAndroidLib = file('../../third_party/llama.cpp/examples/llama.android/lib')
+
+if (!llamaAndroidLib.exists()) {
+    throw new GradleException('llama.cpp source is missing. Run scripts/setup-llama-cpp.ps1 first.')
+}
+
+android {
+    namespace = 'com.arm.aichat'
+    compileSdk = 36
+    ndkVersion = '29.0.13113456'
+
+    defaultConfig {
+        minSdk = 30
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DCMAKE_BUILD_TYPE=Release',
+                    '-DBUILD_SHARED_LIBS=OFF',
+                    '-DLLAMA_BUILD_APP=OFF',
+                    '-DLLAMA_BUILD_COMMON=ON',
+                    '-DLLAMA_OPENSSL=OFF',
+                    '-DGGML_NATIVE=OFF',
+                    '-DGGML_BACKEND_DL=OFF',
+                    '-DGGML_CPU_ALL_VARIANTS=OFF',
+                    '-DGGML_LLAMAFILE=OFF'
+            }
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile new File(llamaAndroidLib, 'src/main/AndroidManifest.xml')
+            java.srcDirs = [new File(llamaAndroidLib, 'src/main/java')]
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = new File(llamaAndroidLib, 'src/main/cpp/CMakeLists.txt')
+            version = '3.31.6'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    packagingOptions {
+        resources.excludes += '/META-INF/{AL2.0,LGPL2.1}'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.datastore:datastore-preferences:1.2.0'
+}

@@ -1,0 +1,21 @@
+{
+  "appId": "com.donghaihui.robothand",
+  "appName": "Robotic Hand",
+  "webDir": "mobile/www",
+  "server": {
+    "cleartext": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "BluetoothLe": {
+      "displayStrings": {
+        "scanning": "正在搜索机器人手...",
+        "cancel": "取消",
+        "availableDevices": "可用设备",
+        "noDeviceFound": "未找到 RobotHand_BLE"
+      }
+    }
+  }
+}

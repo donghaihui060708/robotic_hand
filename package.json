@@ -1,4 +1,26 @@
 {
   "name": "robot-hand",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "mobile:prepare": "node mobile/scripts/prepare-web.mjs",
+    "mobile:build": "npm run mobile:prepare && vite build --config mobile/vite.config.mjs",
+    "android:add": "npm run mobile:build && cap add android",
+    "android:sync": "npm run mobile:build && cap sync android",
+    "android:open": "npm run android:sync && cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/bluetooth-le": "^8.2.0",
+    "@capacitor-community/text-to-speech": "^8.0.2",
+    "@capacitor/core": "^8.4.1",
+    "@capgo/capacitor-speech-recognition": "^8.1.7",
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "lucide": "^0.468.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "vite": "^7.3.6"
+  }
 }

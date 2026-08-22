@@ -9,7 +9,9 @@ mobile/web-src/
 mobile/www/
 android/.gradle/
 android/.idea/
+android/.kotlin/
 android/local.properties
 android/**/build/
+android/**/.cxx/
 .gradle-project-cache/
 *.iml

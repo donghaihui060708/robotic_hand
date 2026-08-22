@@ -1,0 +1,972 @@
+html.capacitor-app {
+  min-height: 100%;
+  background: #0a0f1d;
+}
+
+html.capacitor-app body {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.capacitor-app #serialDropdown {
+  display: none;
+}
+
+html.capacitor-app button,
+html.capacitor-app .dropdown-btn,
+html.capacitor-app .dropdown-menu button {
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+html.capacitor-app .status-bar {
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  height: 40px;
+  padding: 0 12px;
+  justify-content: flex-start;
+}
+
+html.capacitor-app .status-bar #status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html.capacitor-app .status-bar .status-info {
+  margin-left: auto;
+}
+
+html.capacitor-app .app-live-telemetry {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 2fr);
+  gap: 8px;
+  padding: 8px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+html.capacitor-app .app-global-recorder .app-live-telemetry {
+  grid-column: 1 / -1;
+}
+
+html.capacitor-app .app-live-mode,
+html.capacitor-app .app-live-angles > div {
+  min-width: 0;
+  padding: 7px 8px;
+  background: #101722;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+}
+
+html.capacitor-app .app-live-mode span,
+html.capacitor-app .app-live-angles span {
+  display: block;
+  color: #8b949e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+html.capacitor-app .app-live-mode strong,
+html.capacitor-app .app-live-angles strong {
+  display: block;
+  margin-top: 3px;
+  color: #39ff14;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html.capacitor-app .app-live-angles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+html.capacitor-app .app-live-angles > div {
+  text-align: center;
+}
+
+html.capacitor-app .app-bottom-nav {
+  position: fixed;
+  z-index: 110;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 8px env(safe-area-inset-bottom, 0px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: #0d1117;
+  border-top: 1px solid #30363d;
+}
+
+html.capacitor-app .app-tab-button {
+  min-width: 0;
+  min-height: 56px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #8b949e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+html.capacitor-app .app-tab-button.active {
+  color: #58a6ff;
+  background: #17233a;
+}
+
+html.capacitor-app .app-tab-button:active {
+  background: #1f2d48;
+}
+
+html.capacitor-app .app-panel[hidden] {
+  display: none !important;
+}
+
+html.capacitor-app .app-camera-motor-monitor {
+  display: none !important;
+}
+
+html.capacitor-app .display-container,
+html.capacitor-app .json-preview,
+html.capacitor-app .depth-telemetry {
+  display: none !important;
+}
+
+html.capacitor-app .app-local-model-manager {
+  margin: -4px 0 16px;
+  padding: 12px;
+  background: #101722;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+html.capacitor-app .app-local-model-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+html.capacitor-app .app-local-model-heading > div {
+  min-width: 0;
+}
+
+html.capacitor-app .app-local-model-heading strong,
+html.capacitor-app .app-local-model-heading span {
+  display: block;
+}
+
+html.capacitor-app .app-local-model-heading strong {
+  color: #e6edf3;
+  font-size: 14px;
+}
+
+html.capacitor-app .app-local-model-heading > div span {
+  margin-top: 3px;
+  color: #8b949e;
+  font-size: 11px;
+}
+
+html.capacitor-app .app-local-model-state {
+  flex: 0 0 auto;
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+html.capacitor-app .app-local-model-state[data-tone="ready"] {
+  color: #3fb950;
+}
+
+html.capacitor-app .app-local-model-state[data-tone="working"] {
+  color: #d29922;
+}
+
+html.capacitor-app .app-local-model-state[data-tone="error"] {
+  color: #f85149;
+}
+
+html.capacitor-app .app-local-model-progress {
+  height: 5px;
+  margin-top: 12px;
+  overflow: hidden;
+  background: #21262d;
+  border-radius: 3px;
+}
+
+html.capacitor-app .app-local-model-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #388bfd;
+  transition: width 180ms ease;
+}
+
+html.capacitor-app .app-local-model-meta {
+  margin-top: 9px;
+  color: #8b949e;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+html.capacitor-app .app-local-model-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+html.capacitor-app .app-local-model-actions button {
+  min-height: 44px;
+  padding: 8px 14px;
+  color: #fff;
+  background: #1f6feb;
+  border: 1px solid #388bfd;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+html.capacitor-app .app-local-model-actions button.danger {
+  margin-left: auto;
+  color: #f85149;
+  background: transparent;
+  border-color: #6e2b2b;
+}
+
+html.capacitor-app .app-local-model-actions button:disabled {
+  opacity: 0.55;
+}
+
+html.capacitor-app .app-camera-empty {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #c9d1d9;
+  background-color: #101827;
+  background-image:
+    linear-gradient(rgba(88, 166, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88, 166, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  transition: opacity 180ms ease;
+}
+
+html.capacitor-app .app-camera-empty svg {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 4px;
+  color: #58a6ff;
+}
+
+html.capacitor-app .app-camera-empty strong {
+  font-size: 16px;
+}
+
+html.capacitor-app .app-camera-empty > span:not(.app-camera-corner) {
+  color: #8b949e;
+  font-size: 13px;
+}
+
+html.capacitor-app.camera-stream-active .app-camera-empty,
+html.capacitor-app body.camera-stream-active .app-camera-empty {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.capacitor-app .app-camera-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #58a6ff;
+}
+
+html.capacitor-app .app-camera-corner-tl {
+  top: 18px;
+  left: 18px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+html.capacitor-app .app-camera-corner-tr {
+  top: 18px;
+  right: 18px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+html.capacitor-app .app-camera-corner-bl {
+  bottom: 18px;
+  left: 18px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+html.capacitor-app .app-camera-corner-br {
+  right: 18px;
+  bottom: 18px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+
+html.capacitor-app .app-camera-motor-monitor {
+  padding: 10px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+html.capacitor-app .app-camera-monitor-title {
+  margin-bottom: 8px;
+  color: #8b949e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+html.capacitor-app .app-camera-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+html.capacitor-app .app-camera-monitor-item {
+  min-width: 0;
+  padding: 7px 2px;
+  text-align: center;
+  background: #0d1117;
+  border-radius: 6px;
+}
+
+html.capacitor-app .app-camera-monitor-item span {
+  display: block;
+  overflow: hidden;
+  color: #8b949e;
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+html.capacitor-app .app-camera-monitor-item strong {
+  display: block;
+  margin-top: 3px;
+  color: #58a6ff;
+  font-family: monospace;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+html.capacitor-app .app-global-recorder {
+  position: sticky;
+  z-index: 85;
+  top: 64px;
+  width: calc(100% - 24px);
+  max-width: 976px;
+  margin: 0 12px 8px;
+  padding: 10px;
+  background: #111827;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+html.capacitor-app .app-global-recorder #macroRecordBtn {
+  min-height: 48px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+html.capacitor-app .app-global-recorder .app-global-reset {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #d83b35;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+html.capacitor-app .app-global-recorder .macro-indicator {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 599px) {
+  html.capacitor-app .header {
+    position: sticky;
+    z-index: 90;
+    top: 0;
+    max-width: 100%;
+    align-items: flex-start;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: rgba(10, 15, 29, 0.96);
+  }
+
+  html.capacitor-app .header .logo-dot {
+    margin-top: 12px;
+  }
+
+  html.capacitor-app .header h2 {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  html.capacitor-app .header-right {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 64px);
+    gap: 6px;
+    max-width: min(58vw, 210px);
+    min-width: 0;
+  }
+
+  html.capacitor-app .elder-mode-btn,
+  html.capacitor-app .elder-exit-btn,
+  html.capacitor-app .dropdown-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 8px;
+    justify-content: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
+  html.capacitor-app .elder-mode-btn,
+  html.capacitor-app .elder-exit-btn {
+    white-space: normal;
+  }
+
+  html.capacitor-app #bleDropdown,
+  html.capacitor-app #bleDropdown .dropdown-btn {
+    min-width: 0;
+  }
+
+  html.capacitor-app #bleDropdown .dropdown-menu {
+    right: 0;
+    min-width: 156px;
+    max-width: calc(100vw - 24px);
+  }
+
+  html.capacitor-app .main-container {
+    max-width: 100%;
+    padding: 0 12px 8px;
+    gap: 10px;
+  }
+
+  html.capacitor-app .app-live-telemetry {
+    grid-template-columns: 1fr;
+  }
+
+  html.capacitor-app .panel {
+    padding: 14px;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  html.capacitor-app .panel-title {
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    font-size: 15px;
+    line-height: 1.35;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  html.capacitor-app .vision-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  html.capacitor-app .vision-camera-block {
+    width: 100%;
+  }
+
+  html.capacitor-app .camera-caption {
+    min-height: 58px;
+    padding: 10px 12px;
+    font-size: 17px;
+    line-height: 1.35;
+  }
+
+  html.capacitor-app .camera-caption.idle {
+    font-size: 15px;
+  }
+
+  html.capacitor-app .video-wrapper {
+    min-height: 0;
+    width: 100%;
+  }
+
+  html.capacitor-app #outputCanvas {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 4 / 3;
+    height: auto;
+    object-fit: contain;
+  }
+
+  html.capacitor-app body.rear-camera-active #webcamVideo,
+  html.capacitor-app body.rear-camera-active #outputCanvas {
+    transform: none;
+  }
+
+  html.capacitor-app .app-camera-motor-monitor {
+    order: 2;
+  }
+
+  html.capacitor-app .vision-grid > div:last-child {
+    order: 3;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+  }
+
+  html.capacitor-app .vision-grid > div:last-child > div {
+    display: none;
+  }
+
+  html.capacitor-app #startWebcamBtn,
+  html.capacitor-app #stopWebcamBtn {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  html.capacitor-app .control-sliders {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin: 0;
+    padding: 14px;
+  }
+
+  html.capacitor-app .motor-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  html.capacitor-app .motor-col {
+    display: grid;
+    grid-template-columns: 82px 48px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 52px;
+    padding: 8px 10px;
+    text-align: left;
+  }
+
+  html.capacitor-app .motor-col > span:first-child {
+    justify-self: start;
+  }
+
+  html.capacitor-app .motor-col .motor-val {
+    justify-self: end;
+  }
+
+  html.capacitor-app .motor-col input[type="range"] {
+    min-width: 0;
+    margin: 0;
+  }
+
+  html.capacitor-app .rehab-bar {
+    gap: 10px;
+    padding: 12px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  html.capacitor-app .app-global-recorder {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  html.capacitor-app .app-global-recorder #macroRecordBtn {
+    width: 100%;
+    max-width: none;
+    font-size: 12px;
+  }
+
+  html.capacitor-app .app-global-recorder .macro-indicator {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 18px;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    white-space: normal;
+  }
+
+  html.capacitor-app .macro-indicator {
+    text-align: left;
+  }
+
+  html.capacitor-app .training-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  html.capacitor-app .training-card {
+    padding: 12px;
+    border-radius: 8px;
+    gap: 10px;
+  }
+
+  html.capacitor-app .training-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  html.capacitor-app .training-row input,
+  html.capacitor-app .training-row select,
+  html.capacitor-app .training-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 14px;
+  }
+
+  html.capacitor-app .training-status {
+    min-height: 0;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  html.capacitor-app .training-score {
+    font-size: 42px;
+  }
+
+  html.capacitor-app .training-template-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  html.capacitor-app .training-template-item .card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  html.capacitor-app .text-chat-box {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  html.capacitor-app .text-chat-box input {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  html.capacitor-app .text-chat-box button {
+    padding: 0 16px;
+  }
+
+  html.capacitor-app .lang-selector-box,
+  html.capacitor-app .voice-toggle-box,
+  html.capacitor-app .model-source-box {
+    width: 100%;
+    max-width: 100%;
+    min-height: 48px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  html.capacitor-app .lang-selector-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  html.capacitor-app .lang-selector-box > span:first-child {
+    grid-column: 1 / -1;
+    margin: 0 !important;
+    line-height: 1.4;
+  }
+
+  html.capacitor-app .lang-selector-box .lang-radio {
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px;
+    margin: 0 !important;
+    justify-content: center;
+    text-align: center;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+  }
+
+  html.capacitor-app .lang-selector-box .lang-radio.active-lang {
+    background: #17233a;
+    border-color: #388bfd;
+  }
+
+  html.capacitor-app #speechText {
+    min-height: 48px;
+    margin: 14px 0 8px;
+    font-size: 17px;
+    line-height: 1.45;
+  }
+
+  html.capacitor-app #speechText.app-bilingual-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  html.capacitor-app #speechText.app-bilingual-empty span:last-child {
+    color: #8b949e;
+    font-size: 15px;
+    font-style: normal;
+  }
+
+  html.capacitor-app .control-zone {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 10px 0 0;
+  }
+
+  html.capacitor-app .circle-btn {
+    width: 100%;
+    height: 104px;
+    border-radius: 8px;
+  }
+
+  html.capacitor-app .btn-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  html.capacitor-app .action-btn {
+    min-height: 64px;
+    padding: 10px 6px;
+  }
+
+  html.capacitor-app .elder-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  html.capacitor-app .elder-action-btn {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  html.capacitor-app body.elder-mode {
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html.capacitor-app body.elder-mode .app-bottom-nav {
+    display: none !important;
+  }
+
+  html.capacitor-app body.elder-mode .app-panel.elder-keep,
+  html.capacitor-app body.elder-mode .app-panel.elder-keep[hidden] {
+    display: block !important;
+  }
+
+  html.capacitor-app body.elder-mode .app-global-recorder {
+    display: block;
+    grid-template-columns: 1fr;
+  }
+
+  html.capacitor-app body.elder-mode .app-global-recorder #macroRecordBtn,
+  html.capacitor-app body.elder-mode .app-global-recorder .app-global-reset,
+  html.capacitor-app body.elder-mode .app-global-recorder .macro-indicator {
+    display: none !important;
+  }
+
+  html.capacitor-app body.elder-mode .app-global-recorder .app-live-telemetry {
+    display: grid;
+    margin: 0;
+  }
+
+  html.capacitor-app body.elder-mode .vision-grid {
+    gap: 8px;
+  }
+
+  html.capacitor-app body.elder-mode .camera-caption {
+    min-height: 72px;
+    font-size: 20px;
+  }
+
+  html.capacitor-app body.elder-mode .training-card:first-child,
+  html.capacitor-app body.elder-mode #trainingTemplateList .training-mini-btn.danger,
+  html.capacitor-app body.elder-mode #trainingSequenceSource {
+    display: none !important;
+  }
+
+  html.capacitor-app body.elder-mode .training-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html.capacitor-app .display-container {
+    min-height: 144px;
+    margin: 12px 0;
+    padding: 14px;
+  }
+
+  html.capacitor-app .huge-display {
+    font-size: 56px;
+  }
+
+  html.capacitor-app .pose-text-display {
+    font-size: 15px;
+    text-align: center;
+  }
+
+  html.capacitor-app .json-preview {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.capacitor-app *,
+  html.capacitor-app *::before,
+  html.capacitor-app *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html.capacitor-app .app-live-json {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 7px 8px;
+  background: #101722;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+}
+
+html.capacitor-app .app-live-json span {
+  display: block;
+  color: #8b949e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+html.capacitor-app .app-live-json strong {
+  display: block;
+  margin-top: 3px;
+  color: #39ff14;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+html.capacitor-app .app-pi-host-config {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  background: #101722;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+html.capacitor-app .app-pi-host-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+html.capacitor-app .app-pi-host-heading span {
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+html.capacitor-app .app-pi-host-heading strong {
+  color: #58a6ff;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+}
+
+html.capacitor-app .app-pi-host-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  gap: 8px;
+}
+
+html.capacitor-app .app-pi-host-config input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  font-size: 15px;
+}
+
+html.capacitor-app .app-pi-host-config button {
+  min-height: 48px;
+}
+
+html.capacitor-app .app-pi-host-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px;
+  gap: 8px;
+  align-items: center;
+}
+
+html.capacitor-app .app-pi-host-config .pi-host-hint {
+  width: auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #8b949e;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

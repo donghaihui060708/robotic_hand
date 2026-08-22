@@ -8,7 +8,6 @@ import websockets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pyorbbecsdk import Pipeline, Config, OBSensorType
 
-# ==================== 1. 深度抗干扰超参数 ====================
 MIN_DIST = 120.0
 MAX_DIST = 850.0
 MAX_FRAME_JUMP = 260.0
@@ -20,7 +19,6 @@ last_valid_distance = 450.0
 smoothed_distance = 450.0
 current_global_data = {"raw": 450.0, "smoothed": 450.0, "angle": 0, "control_distance": 450.0}
 
-# 相机运行状态控制量
 CAMERA_RUNNING = False
 pipeline = None
 config = None
@@ -87,8 +85,7 @@ def process_and_filter_distance(raw_dist):
     
     clipped = max(MIN_DIST, min(MAX_DIST, smoothed_distance))
     ratio = (clipped - MIN_DIST) / (MAX_DIST - MIN_DIST)
-    # 离镜头越近（Distance越小），比例越小，180 - 0 = 180 (握拳)
-    # 离镜头越远（Distance越大），比例越大，180 - 180 = 0 (张开)
+
     target_angle = int(180 - (ratio * 180))
     
     current_global_data = {
@@ -98,7 +95,6 @@ def process_and_filter_distance(raw_dist):
         "angle": target_angle
     }
 
-# ==================== 2. 相机流线程控制 ====================
 def camera_stream_worker():
     global CAMERA_RUNNING, pipeline, config
     global frame_count, depth_frame_count, valid_pixel_count, last_center_distance
@@ -216,7 +212,6 @@ def stop_camera_pipeline():
     global CAMERA_RUNNING
     CAMERA_RUNNING = False
 
-# ==================== 3. 异步及网络逻辑 ====================
 async def register(websocket, path=None):
     CONNECTED_WEBSOCKETS.add(websocket)
     try:
@@ -232,7 +227,7 @@ async def broadcast_data():
         await asyncio.sleep(0.04)
 
 async def websocket_main():
-    async with websockets.serve(register, "localhost", 8765):
+    async with websockets.serve(register, "0.0.0.0", 8765):
         await broadcast_data()
 
 class DepthGatewayHttpHandler(BaseHTTPRequestHandler):
@@ -270,9 +265,9 @@ class DepthGatewayHttpHandler(BaseHTTPRequestHandler):
 
 def main():
     threading.Thread(target=lambda: asyncio.run(websocket_main()), daemon=True).start()
-    print("🚀 WebSocket Data Broadcast Server running at ws://localhost:8765")
-    server = ThreadingHTTPServer(("localhost", 8766), DepthGatewayHttpHandler)
-    print("🚀 HTTP API Control Server running at http://localhost:8766")
+    print("WebSocket Data Broadcast Server running at ws://0.0.0.0:8765")
+    server = ThreadingHTTPServer(("0.0.0.0", 8766), DepthGatewayHttpHandler)
+    print("HTTP API Control Server running at http://0.0.0.0:8766")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
